@@ -12,6 +12,7 @@ import { DashboardPage } from './pages/Dashboard';
 import { UsersPage } from './pages/Users';
 import { MachinesPage } from './pages/Machines';
 import { CompaniesPage } from './pages/Companies';
+import { ModelsPage } from './pages/Models';
 
 // Placeholders for standard routes
 const Chat = () => <div className="p-8">AI Chat Workspace Content Here</div>;
@@ -70,7 +71,7 @@ function App() {
             <Route path="/commercial" element={<RoleGuard allowedRoles={['full', 'commercial']}><Commercial /></RoleGuard>} />
 
             {/* AROL-ONLY ROUTES */}
-            <Route path="/arol/models" element={<PlatformOwnerGuard><ArolModels /></PlatformOwnerGuard>} />
+            <Route path="/arol/models" element={<PlatformOwnerGuard><ModelsPage /></PlatformOwnerGuard>} />
             <Route path="/arol/companies" element={<PlatformOwnerGuard><CompaniesPage /></PlatformOwnerGuard>} />
             <Route path="/arol/provisioning" element={<PlatformOwnerGuard><ArolProvisioning /></PlatformOwnerGuard>} />
 
