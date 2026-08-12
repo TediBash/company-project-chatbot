@@ -9,6 +9,7 @@ import tenantRoutes from './src/modules/tenant/tenant.routes.js';
 import authRoutes from './src/modules/auth/auth.routes.js';
 import usersRoutes from './src/modules/users/users.routes.js';
 import machinesRoutes from './src/modules/machines/machines.routes.js';
+import companiesRoutes from './src/modules/companies/companies.routes.js';
 
 dotenv.config();
 
@@ -35,6 +36,8 @@ app.use('/api/public/tenant', tenantRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/machines', machinesRoutes);
+app.use('/api/companies', companiesRoutes);
+
 
 app.listen(PORT, async () => {
   console.log(`Backend server running on http://localhost:${PORT}`);

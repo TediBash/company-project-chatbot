@@ -1,9 +1,8 @@
+// src/pages/Dashboard.jsx
 import React from 'react';
-import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 
-// 1. Modular Configuration Array
-// You can easily add, remove, or reorder modules here.
 const DASHBOARD_MODULES = [
   {
     id: 'machines',
@@ -34,7 +33,6 @@ const DASHBOARD_MODULES = [
     title: 'User Management',
     description: 'Add personnel, manage roles, and control access levels.',
     path: '/users',
-    // Notice this is strictly limited to 'full' admins
     allowedRoles: ['full'], 
     icon: (
       <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -47,11 +45,50 @@ const DASHBOARD_MODULES = [
     title: 'Commercial & Quotes',
     description: 'Manage spare parts orders, machine quotes, and invoices.',
     path: '/commercial',
-    // Visible only to Commercial and Full admins (hidden from technicians)
     allowedRoles: ['full', 'commercial'],
     icon: (
       <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+      </svg>
+    )
+  },
+  // --- AROL SUPER ADMIN MODULES ---
+  {
+    id: 'arol-models',
+    title: 'Global Machine Catalog',
+    description: 'Define generic machine models, specs, and default manual PDFs.',
+    path: '/arol/models',
+    allowedRoles: ['full'],
+    requiresPlatformOwner: true,
+    icon: (
+      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+      </svg>
+    )
+  },
+  {
+    id: 'arol-companies',
+    title: 'Tenant Management',
+    description: 'Onboard new companies, assign slugs, and customize UI branding.',
+    path: '/arol/companies',
+    allowedRoles: ['full'],
+    requiresPlatformOwner: true,
+    icon: (
+      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
+      </svg>
+    )
+  },
+  {
+    id: 'arol-mapping',
+    title: 'Fleet Provisioning',
+    description: 'Deploy physical machines to client companies and set plant locations.',
+    path: '/arol/provisioning',
+    allowedRoles: ['full'],
+    requiresPlatformOwner: true,
+    icon: (
+      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
       </svg>
     )
   }
@@ -59,24 +96,27 @@ const DASHBOARD_MODULES = [
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
-  // Safely retrieve user data (fallback to empty object if not found)
-  // SAFE DECODING:
+  
   let user = {};
+  let isPlatformOwner = false;
+  
   const token = localStorage.getItem('arol_token');
   if (token) {
     try {
       const decoded = jwtDecode(token);
-      console.log("🔍 DECODED TOKEN PAYLOAD:", decoded);
       user = decoded.user || {}; 
+      isPlatformOwner = decoded.tenant?.isPlatformOwner || false;
     } catch (error) {
       console.error('Invalid token format');
     }
   }
   
-  // 2. Dynamic Filtering: Keep only modules the user is allowed to see
-  const availableModules = DASHBOARD_MODULES.filter(module => 
-    module.allowedRoles.includes(user.visibility)
-  );
+  // Dynamic Filtering: Check Role AND Platform Owner flag
+  const availableModules = DASHBOARD_MODULES.filter(module => {
+    const hasRole = module.allowedRoles.includes(user.visibility);
+    const hasPlatformAccess = module.requiresPlatformOwner ? isPlatformOwner : true;
+    return hasRole && hasPlatformAccess;
+  });
 
   return (
     <div className="p-8 md:p-12 lg:p-16 animate-in fade-in duration-500">
@@ -85,27 +125,27 @@ export const DashboardPage = () => {
         <h1 className="text-3xl md:text-4xl font-light tracking-tight text-gray-900">
           Welcome, <span className="font-semibold text-[var(--color-tenant-primary)]">{user.firstName}</span>
         </h1>
-        <p className="mt-2 text-gray-500 font-light">Select a module below to begin your session.</p>
+        <p className="mt-2 text-gray-500 font-light">
+          {isPlatformOwner 
+            ? "AROL Global Administration Dashboard."
+            : "Select a module below to begin your session."}
+        </p>
       </header>
 
-      {/* 3. Render the boxes dynamically */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-        
         {availableModules.map((module) => (
           <button 
             key={module.id}
             onClick={() => navigate(module.path)}
             className="group relative flex flex-col items-start p-8 bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:border-[var(--color-tenant-primary)] transition-all duration-300 text-left overflow-hidden"
           >
-            {/* Background Hover Accent */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-tenant-primary)] opacity-5 rounded-bl-full transition-transform duration-500 group-hover:scale-110"></div>
+            {/* Darker background accent for AROL-only modules */}
+            <div className={`absolute top-0 right-0 w-32 h-32 opacity-5 rounded-bl-full transition-transform duration-500 group-hover:scale-110 ${module.requiresPlatformOwner ? 'bg-red-600' : 'bg-[var(--color-tenant-primary)]'}`}></div>
             
-            {/* Icon Block */}
-            <div className="w-14 h-14 rounded-xl bg-gray-50 text-[var(--color-tenant-primary)] flex items-center justify-center mb-6 group-hover:bg-[var(--color-tenant-primary)] group-hover:text-white transition-colors duration-300 shadow-sm">
+            <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 transition-colors duration-300 shadow-sm ${module.requiresPlatformOwner ? 'bg-red-50 text-red-600 group-hover:bg-red-600 group-hover:text-white' : 'bg-gray-50 text-[var(--color-tenant-primary)] group-hover:bg-[var(--color-tenant-primary)] group-hover:text-white'}`}>
               {module.icon}
             </div>
             
-            {/* Text Content */}
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               {module.title}
             </h3>
@@ -114,7 +154,6 @@ export const DashboardPage = () => {
             </p>
           </button>
         ))}
-
       </div>
     </div>
   );

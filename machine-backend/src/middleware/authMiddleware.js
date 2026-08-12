@@ -49,3 +49,16 @@ export const requireRole = (allowedRoles) => {
     next();
   };
 };
+
+/**
+ * Middleware to enforce Platform Owner access.
+ * Must be used AFTER requireAuth so req.tenant is populated.
+ */
+export const requirePlatformOwner = (req, res, next) => {
+  if (!req.tenant || req.tenant.isPlatformOwner !== true) {
+    return res.status(403).json({ 
+      message: 'Forbidden: This action requires AROL Global Administrator privileges.' 
+    });
+  }
+  next();
+};
