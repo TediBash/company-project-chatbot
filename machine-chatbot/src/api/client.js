@@ -21,7 +21,6 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // Clear session on unauthorized (token expired)
       localStorage.removeItem('arol_token');
-      localStorage.removeItem('arol_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

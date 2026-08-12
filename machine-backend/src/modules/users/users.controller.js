@@ -1,151 +1,125 @@
+// src/modules/users/users.controller.js
+import bcrypt from 'bcrypt';
 import { query } from '../../config/db.js';
 
-/**
- * Get users with dynamic filtering
- */
 export const getUsers = async (req, res) => {
-  try {
-    const { companyId } = req.user;
-    const { firstName, lastName, jobTitle, visibility } = req.query;
+  const companyId = req.tenant.companyId;
+  const { firstName, lastName, jobTitle, visibility } = req.query;
 
+  try {
     let sql = `
-      SELECT 
-        user_id AS "id", 
-        first_name AS "firstName", 
-        last_name AS "lastName", 
-        email, 
-        job_title AS "jobTitle", 
-        visibility
-      FROM app_tenant.users
+      SELECT user_id AS "id", first_name AS "firstName", last_name AS "lastName", 
+             email, job_title AS "jobTitle", visibility 
+      FROM app_tenant.users 
       WHERE company_id = $1
     `;
-    
-    const values = [companyId];
+    const params = [companyId];
     let paramIndex = 2;
 
-    // Dynamically append filters if they exist in the query parameters
     if (firstName) {
-      sql += ` AND first_name ILIKE $${paramIndex}`;
-      values.push(`%${firstName}%`); // ILIKE + % for case-insensitive partial match
-      paramIndex++;
+      sql += ` AND first_name ILIKE $${paramIndex++}`;
+      params.push(`%${firstName}%`);
     }
-
     if (lastName) {
-      sql += ` AND last_name ILIKE $${paramIndex}`;
-      values.push(`%${lastName}%`);
-      paramIndex++;
+      sql += ` AND last_name ILIKE $${paramIndex++}`;
+      params.push(`%${lastName}%`);
     }
-
     if (jobTitle) {
-      sql += ` AND job_title ILIKE $${paramIndex}`;
-      values.push(`%${jobTitle}%`);
-      paramIndex++;
+      sql += ` AND job_title ILIKE $${paramIndex++}`;
+      params.push(`%${jobTitle}%`);
     }
-
     if (visibility) {
-      sql += ` AND visibility = $${paramIndex}`;
-      values.push(visibility); // Exact match for ENUM type
-      paramIndex++;
+      sql += ` AND visibility = $${paramIndex++}`;
+      params.push(visibility);
     }
 
-    sql += ` ORDER BY last_name ASC;`;
-    
-    const { rows } = await query(sql, values);
-    
+    sql += ` ORDER BY first_name ASC`;
+
+    const { rows } = await query(sql, params);
     res.json(rows);
   } catch (error) {
-    console.error('[Users Controller - GET] Error:', error);
-    res.status(500).json({ error: 'Failed to retrieve users.' });
+    console.error('[Users GET Error]', error);
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
 };
 
-/**
- * Update an existing user
- */
-export const updateUser = async (req, res) => {
+// NEW: Create User functionality
+export const createUser = async (req, res) => {
+  const companyId = req.tenant.companyId; 
+  const { firstName, lastName, email, password, jobTitle, visibility } = req.body;
+
   try {
-    const { companyId } = req.user;
-    const { id } = req.params; // User ID to modify
-    const { firstName, lastName, jobTitle, visibility } = req.body;
-
-    // Build the dynamic SET clause based on provided fields
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
-
-    if (firstName) {
-      updates.push(`first_name = $${paramIndex++}`);
-      values.push(firstName);
-    }
-    if (lastName) {
-      updates.push(`last_name = $${paramIndex++}`);
-      values.push(lastName);
-    }
-    if (jobTitle !== undefined) { 
-      updates.push(`job_title = $${paramIndex++}`);
-      values.push(jobTitle);
-    }
-    if (visibility) {
-      updates.push(`visibility = $${paramIndex++}`);
-      values.push(visibility);
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No valid fields provided for update.' });
-    }
-
-    // Append the ID and companyId for the WHERE clause
-    values.push(id, companyId);
-    
-    const sql = `
-      UPDATE app_tenant.users 
-      SET ${updates.join(', ')} 
-      WHERE user_id = $${paramIndex++} AND company_id = $${paramIndex}
-      RETURNING 
-        user_id AS "id", 
-        first_name AS "firstName", 
-        last_name AS "lastName", 
-        email, 
-        job_title AS "jobTitle", 
-        visibility;
-    `;
-
-    const { rows } = await query(sql, values);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'User not found or access denied.' });
-    }
-
-    res.json(rows[0]);
-  } catch (error) {
-    console.error('[Users Controller - UPDATE] Error:', error);
-    res.status(500).json({ error: 'Failed to update user.' });
-  }
-};
-
-/**
- * Delete a user
- */
-export const deleteUser = async (req, res) => {
-  try {
-    const { companyId } = req.user;
-    const { id } = req.params;
+    // 1. Hash the temporary password before saving to the DB
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
 
     const sql = `
-      DELETE FROM app_tenant.users 
-      WHERE user_id = $1 AND company_id = $2
+      INSERT INTO app_tenant.users 
+        (company_id, first_name, last_name, email, password_hash, job_title, visibility)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING user_id;
     `;
+    
+    await query(sql, [
+      companyId, firstName, lastName, email, passwordHash, jobTitle, visibility
+    ]);
 
-    const { rowCount } = await query(sql, [id, companyId]);
+    res.status(201).json({ message: 'User created successfully' });
+  } catch (error) {
+    console.error('[Users CREATE Error]', error);
+    // PostgreSQL error code '23505' is a unique_violation (e.g., email already exists)
+    if (error.code === '23505') {
+      return res.status(409).json({ message: 'A user with this email already exists.' });
+    }
+    res.status(500).json({ message: 'Failed to create user' });
+  }
+};
 
-    if (rowCount === 0) {
-      return res.status(404).json({ error: 'User not found or access denied.' });
+// UPDATED: Handle optional password changes
+export const updateUser = async (req, res) => {
+  const { id } = req.params;
+  const companyId = req.tenant.companyId;
+  const { firstName, lastName, jobTitle, visibility, password } = req.body;
+
+  try {
+    if (password) {
+      // If the admin provided a new password, hash it and update it
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
+
+      const sql = `
+        UPDATE app_tenant.users 
+        SET first_name = $1, last_name = $2, job_title = $3, visibility = $4, password_hash = $5
+        WHERE user_id = $6 AND company_id = $7
+      `;
+      await query(sql, [firstName, lastName, jobTitle, visibility, passwordHash, id, companyId]);
+    } else {
+      // If no password was provided, only update the profile fields
+      const sql = `
+        UPDATE app_tenant.users 
+        SET first_name = $1, last_name = $2, job_title = $3, visibility = $4 
+        WHERE user_id = $5 AND company_id = $6
+      `;
+      await query(sql, [firstName, lastName, jobTitle, visibility, id, companyId]);
     }
 
-    res.status(200).json({ message: 'User successfully deleted.' });
+    res.json({ message: 'User updated successfully' });
   } catch (error) {
-    console.error('[Users Controller - DELETE] Error:', error);
-    res.status(500).json({ error: 'Failed to delete user.' });
+    console.error('[Users UPDATE Error]', error);
+    res.status(500).json({ message: 'Failed to update user' });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  const { id } = req.params;
+  const companyId = req.tenant.companyId;
+
+  try {
+    const sql = `DELETE FROM app_tenant.users WHERE user_id = $1 AND company_id = $2`;
+    await query(sql, [id, companyId]);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('[Users DELETE Error]', error);
+    res.status(500).json({ message: 'Failed to delete user' });
   }
 };

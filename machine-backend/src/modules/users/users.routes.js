@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUsers, updateUser, deleteUser } from './users.controller.js';
+import { getUsers, createUser, updateUser, deleteUser } from './users.controller.js';
 import { requireAuth, requireRole } from '../../middleware/authMiddleware.js';
 
 const router = Router();
@@ -10,6 +10,7 @@ router.use(requireRole(['full']));
 
 // Route definitions
 router.get('/', getUsers);
+router.post('/', createUser);
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);
 

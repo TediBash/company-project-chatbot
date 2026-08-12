@@ -57,13 +57,9 @@ export const LoginPage = ({ tenant }) => {
       const { token, user } = response.data;
 
       localStorage.setItem('arol_token', token);
-      localStorage.setItem('arol_user', JSON.stringify(user));
 
-      if (user.visibility === 'full') {
-        navigate('/users');
-      } else {
-        navigate('/machines');
-      }
+      navigate('/dashboard');
+
     } catch (err) {
       console.error('Login error:', err);
       setError(

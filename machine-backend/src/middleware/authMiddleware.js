@@ -15,9 +15,10 @@ export const requireAuth = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Attach the decoded context to the request object
-    // decoded contains: { userId, companyId, visibility }
-    req.user = decoded; 
+    // UNPACK THE NEW SECURE TOKEN STRUCTURE
+    // Attach the decoded nested context to the request object
+    req.user = decoded.user; 
+    req.tenant = decoded.tenant;
     
     next();
   } catch (error) {
@@ -32,6 +33,7 @@ export const requireAuth = (req, res, next) => {
  */
 export const requireRole = (allowedRoles) => {
   return (req, res, next) => {
+    // Because we unpacked req.user above, req.user.visibility now points to the correct nested string
     if (!req.user || !req.user.visibility) {
       return res.status(403).json({ message: 'Forbidden: Role context missing.' });
     }
