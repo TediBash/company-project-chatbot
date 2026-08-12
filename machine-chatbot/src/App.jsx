@@ -9,6 +9,7 @@ import { MainLayout } from './components/layout/MainLayout';
 import LoginPage from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
 import { UsersPage } from './pages/Users';
+import { MachinesPage } from './pages/Machines';
 
 // Placeholders
 const Machines = () => <div className="p-8">My Machines Fleet Content Here</div>;
@@ -56,7 +57,7 @@ function App() {
             {/* Operational Tools */}
             <Route path="/machines" element={
               <RoleGuard allowedRoles={['full', 'technician', 'commercial']}>
-                <Machines />
+                <MachinesPage />
               </RoleGuard>
             } />
 
