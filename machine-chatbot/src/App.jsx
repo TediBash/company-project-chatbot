@@ -15,9 +15,9 @@ import { CompaniesPage } from './pages/Companies';
 import { ModelsPage } from './pages/Models';
 import { ProvisioningPage } from './pages/Provisioning';
 import { CommercialPage } from './pages/Commercial';
+import { ChatPage } from './pages/Chat';
 
 // Placeholders for standard routes
-const Chat = () => <div className="p-8">AI Chat Workspace Content Here</div>;
 const NotFound = () => <div className="p-8 text-red-600">Tenant Not Found</div>;
 
 
@@ -64,7 +64,7 @@ function App() {
             {/* Standard Tenant Routes */}
             <Route path="/users" element={<RoleGuard allowedRoles={['full']}><UsersPage /></RoleGuard>} />
             <Route path="/machines" element={<RoleGuard allowedRoles={['full', 'technician', 'commercial']}><MachinesPage /></RoleGuard>} />
-            <Route path="/chat" element={<RoleGuard allowedRoles={['full', 'technician', 'commercial']}><Chat /></RoleGuard>} />
+            <Route path="/chat" element={<RoleGuard allowedRoles={['full', 'technician']}><ChatPage /></RoleGuard>} />
             <Route path="/commercial" element={<RoleGuard allowedRoles={['full', 'commercial']}><CommercialPage /></RoleGuard>} />
 
             {/* AROL-ONLY ROUTES */}
