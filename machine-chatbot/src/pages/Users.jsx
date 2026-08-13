@@ -4,6 +4,7 @@ import apiClient from '../api/client';
 import { DynamicTable } from '../components/ui/DynamicTable';
 import { RoleBadge } from '../components/ui/RoleBadge';
 import { BaseModal } from '../components/ui/BaseModal';
+import { DynamicFilters } from '../components/ui/DynamicFilters';
 import { jwtDecode } from 'jwt-decode';
 
 export const UsersPage = () => {
@@ -162,10 +163,42 @@ export const UsersPage = () => {
     }
   };
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
+  const handleFilterChange = (name, value) => {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
+
+  // Configuration for DynamicFilters
+  const filterConfig = [
+    {
+      name: 'firstName',
+      type: 'text',
+      placeholder: 'Filter by First Name...',
+      className: 'flex-1 min-w-[150px]'
+    },
+    {
+      name: 'lastName',
+      type: 'text',
+      placeholder: 'Filter by Last Name...',
+      className: 'flex-1 min-w-[150px]'
+    },
+    {
+      name: 'jobTitle',
+      type: 'text',
+      placeholder: 'Filter by Position...',
+      className: 'flex-1 min-w-[150px]'
+    },
+    {
+      name: 'visibility',
+      type: 'select',
+      className: 'flex-1 min-w-[150px]',
+      options: [
+        { value: '', label: 'All Roles' },
+        { value: 'full', label: 'Full Admin' },
+        { value: 'technician', label: 'Technician' },
+        { value: 'commercial', label: 'Commercial' }
+      ]
+    }
+  ];
 
   const columns = [
     { 
@@ -234,42 +267,13 @@ export const UsersPage = () => {
         </button>
       </header>
 
-      <div className="flex flex-wrap gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <input 
-          type="text" 
-          name="firstName" 
-          placeholder="Filter by First Name..." 
-          value={filters.firstName}
-          onChange={handleFilterChange}
-          className="flex-1 min-w-[150px] px-0 py-2 text-sm bg-transparent border-0 border-b border-gray-200 focus:ring-0 focus:border-[var(--color-tenant-primary)] transition-colors"
+      {/* FILTERS */}
+      <div className="mb-6">
+        <DynamicFilters 
+          config={filterConfig} 
+          values={filters} 
+          onChange={handleFilterChange} 
         />
-        <input 
-          type="text" 
-          name="lastName" 
-          placeholder="Filter by Last Name..." 
-          value={filters.lastName}
-          onChange={handleFilterChange}
-          className="flex-1 min-w-[150px] px-0 py-2 text-sm bg-transparent border-0 border-b border-gray-200 focus:ring-0 focus:border-[var(--color-tenant-primary)] transition-colors"
-        />
-        <input 
-          type="text" 
-          name="jobTitle" 
-          placeholder="Filter by Position..." 
-          value={filters.jobTitle}
-          onChange={handleFilterChange}
-          className="flex-1 min-w-[150px] px-0 py-2 text-sm bg-transparent border-0 border-b border-gray-200 focus:ring-0 focus:border-[var(--color-tenant-primary)] transition-colors"
-        />
-        <select 
-          name="visibility" 
-          value={filters.visibility}
-          onChange={handleFilterChange}
-          className="flex-1 min-w-[150px] px-0 py-2 text-sm text-gray-600 bg-transparent border-0 border-b border-gray-200 focus:ring-0 focus:border-[var(--color-tenant-primary)] transition-colors uppercase tracking-wider text-xs"
-        >
-          <option value="">All Roles</option>
-          <option value="full">Full Admin</option>
-          <option value="technician">Technician</option>
-          <option value="commercial">Commercial</option>
-        </select>
       </div>
 
       {error && (

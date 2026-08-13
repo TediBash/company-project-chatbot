@@ -3,13 +3,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import apiClient from '../api/client';
 import { DynamicTable } from '../components/ui/DynamicTable';
 import { BaseModal } from '../components/ui/BaseModal';
+import { DynamicFilters } from '../components/ui/DynamicFilters';
 
 export const CompaniesPage = () => {
   // Data States
   const [companies, setCompanies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState({ search: '' });
 
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -34,7 +35,7 @@ export const CompaniesPage = () => {
     setIsLoading(true);
     setError('');
     try {
-      const response = await apiClient.get('/companies', { params: { search } });
+      const response = await apiClient.get('/companies', { params: { search: filters.search } });
       setCompanies(response.data);
     } catch (err) {
       console.error('Error fetching companies:', err);
@@ -42,7 +43,7 @@ export const CompaniesPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [search]);
+  }, [filters.search]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -51,6 +52,19 @@ export const CompaniesPage = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [fetchCompanies]);
 
+  const filterConfig = [
+    {
+      name: 'search',
+      type: 'text',
+      placeholder: 'Search by name, location, or sector...',
+      className: 'flex-1 min-w-[250px]'
+    }
+  ];
+
+  const handleFilterChange = (name, value) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+  
   const handleNameChange = (e) => {
     const name = e.target.value;
     setForm(prev => {
@@ -213,16 +227,11 @@ export const CompaniesPage = () => {
         </button>
       </header>
 
-      <div className="flex flex-wrap gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <input 
-          type="text" 
-          placeholder="Search by name, location, or sector..." 
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[250px] px-0 py-2 text-sm bg-transparent border-0 border-b border-gray-200 focus:ring-0 focus:border-red-600 transition-colors"
-        />
-      </div>
-
+      <DynamicFilters 
+        config={filterConfig} 
+        values={filters} 
+        onChange={handleFilterChange} 
+      />
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-sm font-light text-red-600">
           {error}

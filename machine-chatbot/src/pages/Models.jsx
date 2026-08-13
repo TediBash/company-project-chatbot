@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import apiClient from '../api/client';
 import { DynamicTable } from '../components/ui/DynamicTable';
 import { BaseModal } from '../components/ui/BaseModal';
+import { DynamicFilters } from '../components/ui/DynamicFilters';
 
 export const ModelsPage = () => {
   // Data States
@@ -11,8 +12,7 @@ export const ModelsPage = () => {
   const [error, setError] = useState('');
   
   // Filter States
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [filters, setFilters] = useState({ search: '', status: 'ALL' });
 
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -37,7 +37,7 @@ export const ModelsPage = () => {
     setIsLoading(true);
     setError('');
     try {
-      const response = await apiClient.get('/models', { params: { search } });
+      const response = await apiClient.get('/models', { params: { search: filters.search } });
       setModels(response.data);
     } catch (err) {
       console.error('Error fetching models:', err);
@@ -45,7 +45,7 @@ export const ModelsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [search]);
+  }, [filters.search]);
 
   // Debounced Search
   useEffect(() => {
@@ -54,6 +54,30 @@ export const ModelsPage = () => {
     }, 300);
     return () => clearTimeout(delayDebounceFn);
   }, [fetchModels]);
+
+  // Configuration for DynamicFilters
+  const filterConfig = [
+    {
+      name: 'search',
+      type: 'text',
+      placeholder: 'Search models, specs, descriptions...',
+      className: 'flex-1 min-w-[250px]'
+    },
+    {
+      name: 'status',
+      type: 'select',
+      className: 'min-w-[150px]',
+      options: [
+        { value: 'ALL', label: 'All Statuses' },
+        { value: 'ACTIVE', label: 'Active Only' },
+        { value: 'INACTIVE', label: 'Inactive Only' }
+      ]
+    }
+  ];
+
+  const handleFilterChange = (name, value) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
 
   // Handlers
   const handleCreateSubmit = async (e) => {
@@ -126,8 +150,8 @@ export const ModelsPage = () => {
 
   // Local Filtering for Status
   const filteredModels = models.filter(m => {
-    if (statusFilter === 'ACTIVE') return m.isActive === true;
-    if (statusFilter === 'INACTIVE') return m.isActive === false;
+    if (filters.status === 'ACTIVE') return m.isActive === true;
+    if (filters.status === 'INACTIVE') return m.isActive === false;
     return true;
   });
 
@@ -233,23 +257,12 @@ export const ModelsPage = () => {
       </header>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <input 
-          type="text" 
-          placeholder="Search models, specs, descriptions..." 
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[250px] px-0 py-2 text-sm bg-transparent border-0 border-b border-gray-200 focus:ring-0 focus:border-red-600 transition-colors"
+      <div className="mb-6">
+        <DynamicFilters 
+          config={filterConfig} 
+          values={filters} 
+          onChange={handleFilterChange} 
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="min-w-[150px] px-0 py-2 text-xs font-semibold text-gray-600 bg-transparent border-0 border-b border-gray-200 focus:ring-0 focus:border-red-600 transition-colors uppercase tracking-wider"
-        >
-          <option value="ALL">All Statuses</option>
-          <option value="ACTIVE">Active Only</option>
-          <option value="INACTIVE">Inactive Only</option>
-        </select>
       </div>
 
       {error && (

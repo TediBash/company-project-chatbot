@@ -126,7 +126,7 @@ export const createProvisionedMachine = async (req, res) => {
     await query(sql, [companyId, modelId, serialNumber, plantLocation, deliveryDate, plcFamily, softwareVersion]);
     res.status(201).json({ message: 'Machine deployed successfully.' });
   } catch (error) {
-    if (error.code === '23505') return res.status(409).json({ message: 'Serial number already exists.' });
+    if (error.code === '23505') return res.status(409).json({ message: 'This Serial Number is already registered for this specific Company.' });
     console.error('[Machine CREATE Error]', error);
     res.status(500).json({ message: 'Failed to deploy machine.' });
   }
@@ -146,7 +146,7 @@ export const updateProvisionedMachine = async (req, res) => {
     await query(sql, [companyId, modelId, serialNumber, plantLocation, deliveryDate, plcFamily, softwareVersion, id]);
     res.json({ message: 'Machine configuration updated.' });
   } catch (error) {
-    if (error.code === '23505') return res.status(409).json({ message: 'Serial number already exists.' });
+    if (error.code === '23505') return res.status(409).json({ message: 'This Serial Number is already registered for this specific Company.' });
     console.error('[Machine UPDATE Error]', error);
     res.status(500).json({ message: 'Failed to update machine.' });
   }

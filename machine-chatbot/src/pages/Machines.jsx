@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import apiClient from '../api/client';
 import { BaseModal } from '../components/ui/BaseModal';
+import { DynamicFilters } from '../components/ui/DynamicFilters';
 import { jwtDecode } from 'jwt-decode';
 
 export const MachinesPage = () => {
@@ -17,10 +18,35 @@ export const MachinesPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  // Unified Filter State
+  const [filters, setFilters] = useState({ search: '', status: 'ALL' });
   
   const [selectedMachine, setSelectedMachine] = useState(null);
+
+  // Configuration for DynamicFilters
+  const filterConfig = [
+    {
+      name: 'search',
+      type: 'text',
+      placeholder: 'Search by Serial Number, Model, or Location...',
+      className: 'flex-1 min-w-[240px]'
+    },
+    {
+      name: 'status',
+      type: 'select',
+      className: 'min-w-[160px]',
+      options: [
+        { value: 'ALL', label: 'All Statuses' },
+        { value: 'RUNNING', label: 'Running' },
+        { value: 'MAINTENANCE', label: 'Maintenance' },
+        { value: 'STOPPED', label: 'Stopped' }
+      ]
+    }
+  ];
+
+  const handleFilterChange = (name, value) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
   
   // NEW: State for the Full-Screen PDF Viewer
   const [viewingManual, setViewingManual] = useState(null);
@@ -61,13 +87,13 @@ export const MachinesPage = () => {
 
   const filteredMachines = machines.filter((m) => {
     const matchesSearch =
-      m.serialNumber.toLowerCase().includes(search.toLowerCase()) ||
-      m.modelCode.toLowerCase().includes(search.toLowerCase()) ||
-      m.plantLocation.toLowerCase().includes(search.toLowerCase());
+      m.serialNumber.toLowerCase().includes(filters.search.toLowerCase()) ||
+      m.modelCode.toLowerCase().includes(filters.search.toLowerCase()) ||
+      m.plantLocation.toLowerCase().includes(filters.search.toLowerCase());
 
     const matchesStatus =
-      statusFilter === 'ALL' ||
-      m.status.toUpperCase() === statusFilter.toUpperCase();
+      filters.status === 'ALL' ||
+      m.status.toUpperCase() === filters.status.toUpperCase();
 
     return matchesSearch && matchesStatus;
   });
@@ -133,24 +159,12 @@ export const MachinesPage = () => {
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-4 mb-8 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <input
-          type="text"
-          placeholder="Search by Serial Number, Model, or Location..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[240px] px-0 py-2 text-sm bg-transparent border-0 border-b border-gray-200 focus:ring-0 focus:border-[var(--color-tenant-primary)] transition-colors"
+      <div className="mb-8">
+        <DynamicFilters 
+          config={filterConfig} 
+          values={filters} 
+          onChange={handleFilterChange} 
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="min-w-[160px] px-0 py-2 text-xs font-semibold text-gray-600 bg-transparent border-0 border-b border-gray-200 focus:ring-0 focus:border-[var(--color-tenant-primary)] transition-colors uppercase tracking-wider"
-        >
-          <option value="ALL">All Statuses</option>
-          <option value="RUNNING">Running</option>
-          <option value="MAINTENANCE">Maintenance</option>
-          <option value="STOPPED">Stopped</option>
-        </select>
       </div>
 
       {error && (

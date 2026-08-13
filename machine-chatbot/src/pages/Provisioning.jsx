@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import apiClient from '../api/client';
 import { DynamicTable } from '../components/ui/DynamicTable';
 import { BaseModal } from '../components/ui/BaseModal';
+import { DynamicFilters } from '../components/ui/DynamicFilters';
 
 export const ProvisioningPage = () => {
   // Data States
@@ -56,11 +57,37 @@ export const ProvisioningPage = () => {
   }, [fetchMachines]);
 
   // Reset to page 1 if filters change
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
+  const handleFilterChange = (name, value) => {
     setFilters(prev => ({ ...prev, [name]: value }));
     setPage(1);
   };
+
+  const filterConfig = [
+    {
+      name: 'search',
+      type: 'text',
+      placeholder: 'Search S/N or Location...',
+      className: 'flex-1 min-w-[200px]'
+    },
+    {
+      name: 'companyId',
+      type: 'select',
+      className: 'w-48',
+      options: [
+        { value: '', label: 'All Companies' },
+        ...options.companies.map(c => ({ value: c.id, label: c.name }))
+      ]
+    },
+    {
+      name: 'modelId',
+      type: 'select',
+      className: 'w-48',
+      options: [
+        { value: '', label: 'All Models' },
+        ...options.models.map(m => ({ value: m.id, label: m.code }))
+      ]
+    }
+  ];
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -184,30 +211,19 @@ export const ProvisioningPage = () => {
       </header>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <input 
-          type="text" name="search" placeholder="Search S/N or Location..." 
-          value={filters.search} onChange={handleFilterChange}
-          className="flex-1 min-w-[200px] border-0 border-b border-gray-200 focus:ring-0 focus:border-red-600 text-sm"
-        />
-        <select 
-          name="companyId" value={filters.companyId} onChange={handleFilterChange}
-          className="w-48 border-0 border-b border-gray-200 focus:ring-0 focus:border-red-600 text-sm font-medium"
-        >
-          <option value="">All Companies</option>
-          {options.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select 
-          name="modelId" value={filters.modelId} onChange={handleFilterChange}
-          className="w-48 border-0 border-b border-gray-200 focus:ring-0 focus:border-red-600 text-sm font-medium"
-        >
-          <option value="">All Models</option>
-          {options.models.map(m => <option key={m.id} value={m.id}>{m.code}</option>)}
-        </select>
-        <button onClick={() => openModal()} className="px-6 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-md uppercase tracking-wider ml-auto">
-          + Map Machine
-        </button>
-      </div>
+      <DynamicFilters 
+        config={filterConfig} 
+        values={filters} 
+        onChange={handleFilterChange} 
+        actionButton={
+          <button 
+            onClick={() => openModal()} 
+            className="px-6 py-2 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase tracking-wider shadow-sm"
+          >
+            + Map Machine
+          </button>
+        }
+      />
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <DynamicTable columns={columns} data={machines} isLoading={isLoading} />
