@@ -12,6 +12,7 @@ import machinesRoutes from './src/modules/machines/machines.routes.js';
 import companiesRoutes from './src/modules/companies/companies.routes.js';
 import modelsRoutes from './src/modules/models/models.routes.js';
 import provisioningRoutes from './src/modules/provisioning/provisioning.routes.js';
+import commercialRoutes from './src/modules/commercial/commercial.routes.js';
 
 dotenv.config();
 
@@ -41,6 +42,8 @@ app.use('/api/machines', machinesRoutes);
 app.use('/api/companies', companiesRoutes);
 app.use('/api/models', modelsRoutes);
 app.use('/api/provisioning', provisioningRoutes);
+app.use('/api/commercial', commercialRoutes);
+
 
 app.listen(PORT, async () => {
   console.log(`Backend server running on http://localhost:${PORT}`);

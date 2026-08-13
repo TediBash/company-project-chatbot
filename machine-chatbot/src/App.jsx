@@ -14,18 +14,14 @@ import { MachinesPage } from './pages/Machines';
 import { CompaniesPage } from './pages/Companies';
 import { ModelsPage } from './pages/Models';
 import { ProvisioningPage } from './pages/Provisioning';
+import { CommercialPage } from './pages/Commercial';
 
 // Placeholders for standard routes
 const Chat = () => <div className="p-8">AI Chat Workspace Content Here</div>;
-const Commercial = () => <div className="p-8">Commercial & Quotes Content Here</div>;
 const NotFound = () => <div className="p-8 text-red-600">Tenant Not Found</div>;
 
-// Placeholders for AROL Global Routes
-const ArolModels = () => <div className="p-8">Global Machine Models Catalog Builder</div>;
-const ArolCompanies = () => <div className="p-8">Tenant Company Configuration Manager</div>;
-const ArolProvisioning = () => <div className="p-8">Machine Provisioning & Fleet Deployment Map</div>;
 
-// --- NEW SECURITY GUARD: Platform Owner Only ---
+// --- SECURITY GUARD: Platform Owner Only ---
 const PlatformOwnerGuard = ({ children }) => {
   const token = localStorage.getItem('arol_token');
   if (!token) return <Navigate to="/login" replace />;
@@ -69,7 +65,7 @@ function App() {
             <Route path="/users" element={<RoleGuard allowedRoles={['full']}><UsersPage /></RoleGuard>} />
             <Route path="/machines" element={<RoleGuard allowedRoles={['full', 'technician', 'commercial']}><MachinesPage /></RoleGuard>} />
             <Route path="/chat" element={<RoleGuard allowedRoles={['full', 'technician', 'commercial']}><Chat /></RoleGuard>} />
-            <Route path="/commercial" element={<RoleGuard allowedRoles={['full', 'commercial']}><Commercial /></RoleGuard>} />
+            <Route path="/commercial" element={<RoleGuard allowedRoles={['full', 'commercial']}><CommercialPage /></RoleGuard>} />
 
             {/* AROL-ONLY ROUTES */}
             <Route path="/arol/models" element={<PlatformOwnerGuard><ModelsPage /></PlatformOwnerGuard>} />
