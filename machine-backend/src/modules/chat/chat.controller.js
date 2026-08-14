@@ -84,30 +84,27 @@ export const getSessions = async (req, res) => {
   }
 };
 
-// src/modules/chat/chat.controller.js
-
-// Retrieves the full history, roadmap, and summary to load the chat screen
+// GET /api/chat/sessions/:id
 export const getSessionDetails = async (req, res) => {
   const { id } = req.params;
   const companyId = req.tenant.companyId;
 
   try {
-    // 1. Verify Ownership
     const sessionRes = await query(
       `SELECT session_id, title FROM app_chat.chat_sessions WHERE session_id = $1 AND company_id = $2`, 
       [id, companyId]
     );
     if (sessionRes.rows.length === 0) return res.status(404).json({ message: 'Session not found.' });
 
-    // 2. Fetch Messages
+    // UPDATE: Fetch ONLY the last 5 messages, ordered backwards, then reverse them in JS
+    const limit = 5;
     const messagesRes = await query(
       `SELECT message_id, role, content, created_at 
        FROM app_chat.chat_messages 
-       WHERE session_id = $1 ORDER BY created_at ASC`, 
-      [id]
+       WHERE session_id = $1 ORDER BY created_at DESC LIMIT $2`, 
+      [id, limit]
     );
 
-    // 3. Fetch Roadmap
     const roadmapRes = await query(
       `SELECT roadmap_json FROM app_chat.chat_roadmaps WHERE session_id = $1`, 
       [id]
@@ -115,12 +112,40 @@ export const getSessionDetails = async (req, res) => {
 
     res.json({
       session: sessionRes.rows[0],
-      messages: messagesRes.rows,
+      messages: messagesRes.rows.reverse(), // Reverse to display chronologically in the UI
+      hasMore: messagesRes.rows.length === limit, // Tell the frontend if more exist
       roadmap: roadmapRes.rows[0]?.roadmap_json || { steps: [] }
     });
   } catch (error) {
     console.error('[Chat GET Details Error]', error);
     res.status(500).json({ message: 'Failed to load chat history.' });
+  }
+};
+
+
+// GET /api/chat/sessions/:id/messages
+// Cursor-based pagination to load older messages when scrolling up
+export const getSessionMessages = async (req, res) => {
+  const { id } = req.params;
+  const { before, limit = 5 } = req.query;
+
+  try {
+    const sql = `
+      SELECT message_id, role, content, created_at 
+      FROM app_chat.chat_messages 
+      WHERE session_id = $1 AND created_at < $2 
+      ORDER BY created_at DESC LIMIT $3
+    `;
+    
+    const { rows } = await query(sql, [id, before, limit]);
+    
+    res.json({
+      messages: rows.reverse(),
+      hasMore: rows.length === parseInt(limit)
+    });
+  } catch (error) {
+    console.error('[Load Messages Error]', error);
+    res.status(500).json({ message: 'Failed to load messages.' });
   }
 };
 

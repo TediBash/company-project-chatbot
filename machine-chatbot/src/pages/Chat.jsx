@@ -32,7 +32,12 @@ export const ChatPage = () => {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [agentStatus, setAgentStatus] = useState('');
+
+  // State for pagination
   const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null); 
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // 5. Modal States (NEW)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -42,12 +47,17 @@ export const ChatPage = () => {
   const [editChatTitle, setEditChatTitle] = useState('');
   
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState(null);
+
+  // 6. UI Layout States
+  const [isRoadmapOpen, setIsRoadmapOpen] = useState(true);
 
   // Auto-scroll to bottom of chat
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-  useEffect(() => { scrollToBottom(); }, [messages, agentStatus]);
+
+  useEffect(() => { if (agentStatus) scrollToBottom(); }, [agentStatus]);
 
   // Fetch Session History Sidebar
   const fetchSessions = useCallback(async () => {
@@ -66,15 +76,54 @@ export const ChatPage = () => {
     return () => clearTimeout(delayDebounce);
   }, [fetchSessions]);
 
-  // Load a Specific Conversation
+  // Load Initial Conversation (Latest 5)
   const loadConversation = async (sessionId) => {
     try {
       const response = await apiClient.get(`/chat/sessions/${sessionId}`);
       setActiveSession(response.data.session);
       setMessages(response.data.messages);
+      setHasMore(response.data.hasMore);
       setRoadmap(response.data.roadmap);
+      
+      // Auto-scroll to the newest message on initial load
+      setTimeout(() => scrollToBottom(), 150);
     } catch (err) {
       console.error('Failed to load chat history', err);
+    }
+  };
+
+  // Scroll Event Listener
+  const handleScroll = async (e) => {
+    // If we hit the absolute top of the container, have more to load, and aren't already loading
+    if (e.target.scrollTop === 0 && hasMore && !isLoadingMore) {
+      const oldestMessage = messages[0];
+      if (!oldestMessage || !oldestMessage.created_at) return;
+
+      setIsLoadingMore(true);
+      const oldScrollHeight = e.target.scrollHeight;
+
+      try {
+        const id = activeSession.session_id || activeSession.id;
+        const res = await apiClient.get(`/chat/sessions/${id}/messages`, {
+          params: { before: oldestMessage.created_at, limit: 5 }
+        });
+
+        // Prepend the older messages to the array
+        setMessages(prev => [...res.data.messages, ...prev]);
+        setHasMore(res.data.hasMore);
+
+        // Instantly restore scroll position so the user's view doesn't jump
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            const newScrollHeight = chatContainerRef.current.scrollHeight;
+            chatContainerRef.current.scrollTop = newScrollHeight - oldScrollHeight;
+          }
+        }, 0);
+      } catch (err) {
+        console.error('Failed to load older messages', err);
+      } finally {
+        setIsLoadingMore(false);
+      }
     }
   };
 
@@ -111,13 +160,20 @@ export const ChatPage = () => {
 
   // Delete Session
   const handleDeleteSession = async () => {
+    if (!sessionToDelete) return;
     try {
-      const id = activeSession.id || activeSession.session_id;
+      const id = sessionToDelete.id || sessionToDelete.session_id;
       await apiClient.delete(`/chat/sessions/${id}`);
-      setActiveSession(null);
-      setMessages([]);
-      setRoadmap({ steps: [] });
+      
+      // If we are currently looking at the chat we just deleted, clear the screen
+      if (activeSession && (activeSession.id === id || activeSession.session_id === id)) {
+        setActiveSession(null);
+        setMessages([]);
+        setRoadmap({ steps: [] });
+      }
+      
       setIsDeleteModalOpen(false);
+      setSessionToDelete(null);
       fetchSessions();
     } catch (err) {
       alert('Failed to delete chat.');
@@ -128,6 +184,7 @@ export const ChatPage = () => {
   const sendMessageStream = async (sessionId, messageContent) => {
     // Optimistic UI Update
     setMessages(prev => [...prev, { role: 'user', content: messageContent }]);
+    setTimeout(scrollToBottom, 50);
     setInput('');
     setIsProcessing(true);
     setAgentStatus('Connecting to AI Assistant...');
@@ -161,7 +218,11 @@ export const ChatPage = () => {
             if (data.type === 'status') {
               setAgentStatus(data.payload);
             } else if (data.type === 'message') {
-              setMessages(prev => [...prev, { role: 'assistant', content: data.payload }]);
+              setMessages(prev => {
+                const updated = [...prev, { role: 'assistant', content: data.payload }];
+                setTimeout(scrollToBottom, 50); // <-- Add this
+                return updated;
+              });
             } else if (data.type === 'action_required') {
               setMessages(prev => [...prev, { role: 'assistant', content: JSON.stringify({ isActionRequest: true, ...data.payload }) }]);
             } else if (data.type === 'roadmap_update') {
@@ -268,8 +329,8 @@ export const ChatPage = () => {
     <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden animate-in fade-in duration-500">
       
       {/* LEFT SIDEBAR: Session History */}
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-100">
+      <div className="w-80 bg-white border-r border-gray-200 flex flex-col min-h-0">
+        <div className="p-4 border-b border-gray-100 shrink-0">
           <button 
             onClick={() => setIsCreateModalOpen(true)}
             className="w-full py-2.5 mb-4 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase tracking-wider shadow-sm transition-opacity"
@@ -299,21 +360,39 @@ export const ChatPage = () => {
           />
         </div>
         
-        <div className="flex-1 overflow-y-auto p-2">
+        {/* Added min-h-0 and block formatting context to guarantee scrolling */}
+        <div className="flex-1 overflow-y-auto min-h-0 p-2">
           {sessions.map(session => (
-            <button 
+            <div 
               key={session.id}
+              className={`group relative w-full flex items-center justify-between p-3 rounded-lg mb-1 transition-colors ${activeSession?.id === session.id || activeSession?.session_id === session.id ? 'bg-blue-50 border border-blue-100' : 'hover:bg-gray-50 border border-transparent cursor-pointer'}`}
               onClick={() => loadConversation(session.id)}
-              className={`w-full text-left p-3 rounded-lg mb-1 transition-colors ${activeSession?.id === session.id ? 'bg-blue-50 border border-blue-100' : 'hover:bg-gray-50 border border-transparent'}`}
             >
-              <h4 className="text-sm font-semibold text-gray-800 line-clamp-1 mb-1">{session.title}</h4>
-              <div className="flex justify-between items-center text-[10px] text-gray-400">
-                <span>{new Date(session.updatedAt).toLocaleDateString()}</span>
-                {viewAll && session.userId !== currentUserId && (
-                  <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-bold">{session.userName}</span>
-                )}
+              <div className="flex-1 pr-6">
+                <h4 className="text-sm font-semibold text-gray-800 line-clamp-1 mb-1">{session.title}</h4>
+                <div className="flex justify-between items-center text-[10px] text-gray-400">
+                  <span>{new Date(session.updatedAt).toLocaleDateString()}</span>
+                  {viewAll && session.userId !== currentUserId && (
+                    <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-bold">{session.userName}</span>
+                  )}
+                </div>
               </div>
-            </button>
+              
+              {/* Inline Delete Button (Shows on Hover) */}
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); // Prevents loadConversation from firing
+                  setSessionToDelete(session); 
+                  setIsDeleteModalOpen(true); 
+                }}
+                className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all shadow-sm bg-white"
+                title="Delete Chat"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
           ))}
         </div>
       </div>
@@ -335,7 +414,7 @@ export const ChatPage = () => {
                 Edit Title
               </button>
               <button 
-                onClick={() => setIsDeleteModalOpen(true)}
+                onClick={() => { setSessionToDelete(activeSession); setIsDeleteModalOpen(true); }}
                 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-red-500 transition-colors"
               >
                 Delete
@@ -345,7 +424,16 @@ export const ChatPage = () => {
         </div>
 
         {/* Message Area */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-8">
+        <div 
+          ref={chatContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto p-6 md:p-8 relative"
+        >
+          {isLoadingMore && (
+            <div className="flex justify-center py-2 absolute top-0 left-0 w-full bg-white/80 z-10">
+              <span className="text-xs font-bold text-[var(--color-tenant-primary)] animate-pulse">Loading older messages...</span>
+            </div>
+          )}
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto opacity-50">
               <svg className="w-16 h-16 text-[var(--color-tenant-primary)] mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -399,46 +487,68 @@ export const ChatPage = () => {
         </div>
       </div>
 
-      {/* RIGHT SIDEBAR: Dynamic Roadmap */}
-      <div className="w-72 bg-white border-l border-gray-200 hidden lg:flex flex-col shadow-[-4px_0_15px_-5px_rgba(0,0,0,0.05)] z-10">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-          <h3 className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-500">Live Roadmap</h3>
+      {/* RIGHT SIDEBAR: Dynamic Roadmap (Collapsible) */}
+      <div className={`bg-white border-l border-gray-200 hidden lg:flex flex-col shadow-[-4px_0_15px_-5px_rgba(0,0,0,0.05)] z-10 transition-all duration-300 ${isRoadmapOpen ? 'w-72' : 'w-14 items-center'}`}>
+        
+        {/* Sidebar Header & Toggle */}
+        <div className={`p-4 border-b border-gray-100 bg-gray-50/50 flex ${isRoadmapOpen ? 'justify-between' : 'justify-center'} items-center shrink-0`}>
+          {isRoadmapOpen && <h3 className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-500 truncate mr-2">Live Roadmap</h3>}
+          <button 
+            onClick={() => setIsRoadmapOpen(!isRoadmapOpen)}
+            className="text-gray-400 hover:text-[var(--color-tenant-primary)] transition-colors p-1 rounded hover:bg-gray-200"
+            title={isRoadmapOpen ? "Collapse Roadmap" : "Expand Roadmap"}
+          >
+            <svg className={`w-5 h-5 transform transition-transform duration-300 ${isRoadmapOpen ? 'rotate-0' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          {!roadmap || !roadmap.steps || roadmap.steps.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center mt-10 italic">No active procedures mapped.</p>
-          ) : (
-            <div className="space-y-6">
-              {roadmap.objective && (
-                <h4 className="text-sm font-bold text-gray-900 leading-tight border-l-2 border-[var(--color-tenant-primary)] pl-2">
-                  {roadmap.objective}
-                </h4>
-              )}
-              <ul className="space-y-4">
-                {roadmap.steps.map((step, idx) => (
-                  <li key={idx} className="flex gap-3">
-                    <div className="mt-0.5">
-                      {step.status === 'completed' ? (
-                        <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm">
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                        </div>
-                      ) : step.status === 'failed' ? (
-                        <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center shadow-sm">
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </div>
-                      ) : (
-                        <div className="w-4 h-4 border-2 border-gray-300 rounded-full bg-white shadow-sm"></div>
-                      )}
-                    </div>
-                    <span className={`text-xs ${step.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>
-                      {step.task}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+
+        {/* Sidebar Content */}
+        {isRoadmapOpen ? (
+          <div className="flex-1 overflow-y-auto min-h-0 p-4">
+            {!roadmap || !roadmap.steps || roadmap.steps.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center mt-10 italic">No active procedures mapped.</p>
+            ) : (
+              <div className="space-y-6">
+                {roadmap.objective && (
+                  <h4 className="text-sm font-bold text-gray-900 leading-tight border-l-2 border-[var(--color-tenant-primary)] pl-2">
+                    {roadmap.objective}
+                  </h4>
+                )}
+                <ul className="space-y-4">
+                  {roadmap.steps.map((step, idx) => (
+                    <li key={idx} className="flex gap-3">
+                      <div className="mt-0.5 shrink-0">
+                        {step.status === 'completed' ? (
+                          <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm">
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                          </div>
+                        ) : step.status === 'failed' ? (
+                          <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center shadow-sm">
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </div>
+                        ) : (
+                          <div className="w-4 h-4 border-2 border-gray-300 rounded-full bg-white shadow-sm"></div>
+                        )}
+                      </div>
+                      <span className={`text-xs ${step.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>
+                        {step.task}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Collapsed View Icon Placeholder */
+          <div className="flex-1 flex flex-col pt-6 items-center border-t border-gray-50">
+            <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+        )}
       </div>
 
       {/* --- MODALS --- */}
@@ -485,13 +595,13 @@ export const ChatPage = () => {
       </BaseModal>
 
       {/* 3. Delete Modal */}
-      <BaseModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Confirm Deletion">
+      <BaseModal isOpen={isDeleteModalOpen} onClose={() => { setIsDeleteModalOpen(false); setSessionToDelete(null); }} title="Confirm Deletion">
         <div className="space-y-6">
           <p className="text-sm font-light text-gray-600">
-            Are you sure you want to delete <span className="font-semibold text-gray-900">{activeSession?.title}</span>? This will permanently remove the chat history, roadmap, and AI summary.
+            Are you sure you want to delete <span className="font-semibold text-gray-900">{sessionToDelete?.title}</span>? This will permanently remove the chat history, roadmap, and AI summary.
           </p>
           <div className="flex justify-end gap-3 pt-2">
-            <button onClick={() => setIsDeleteModalOpen(false)} className="px-5 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
+            <button onClick={() => { setIsDeleteModalOpen(false); setSessionToDelete(null); }} className="px-5 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
             <button onClick={handleDeleteSession} className="px-5 py-2 text-xs font-bold tracking-wider text-white bg-red-600 hover:bg-red-700 rounded-md uppercase">Delete Chat</button>
           </div>
         </div>

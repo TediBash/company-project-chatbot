@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { 
   getSessions, 
-  getSessionDetails, 
+  getSessionDetails,
+  getSessionMessages, 
   streamMessage, 
   confirmAction,
   createSession,
@@ -17,6 +18,7 @@ router.get('/sessions', getSessions);
 router.post('/sessions', createSession);
 router.get('/sessions/:id', getSessionDetails);
 router.delete('/sessions/:id', deleteSession);
+router.get('/sessions/:id/messages', getSessionMessages);
 router.put('/sessions/:id/title', updateSessionTitle);
 
 router.post('/sessions/:id/stream', streamMessage);
