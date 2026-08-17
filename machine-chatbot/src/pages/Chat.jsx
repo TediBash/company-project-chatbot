@@ -190,8 +190,11 @@ export const ChatPage = () => {
     setAgentStatus('Connecting to AI Assistant...');
 
     try {
-      // Using native fetch because Axios doesn't handle SSE streams gracefully
-      const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/chat/sessions/${sessionId}/stream`, {
+      // 1. Ask Axios to generate the exact URL
+      const streamUrl = apiClient.getUri({ url: `/chat/sessions/${sessionId}/stream` });
+
+      // 2. Use native fetch to handle the streaming response
+      const response = await fetch(streamUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -200,45 +203,100 @@ export const ChatPage = () => {
         body: JSON.stringify({ content: messageContent })
       });
 
+      if (!response.ok) {
+        throw new Error(`Backend rejected request with status: ${response.status}`);
+      }
+
+      if (!response.body) {
+         throw new Error("ReadableStream not supported or no body returned.");
+      }
+
+      // Initialize the reader EXACTLY ONCE
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
+      let buffer = ''; 
 
+      // Single loop to read the stream
       // Read the stream chunk by chunk
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        
+        if (done) {
+          // If the stream closes but there is still data in the buffer, process it!
+          if (buffer.trim().startsWith('data:')) {
+             try {
+                const finalData = JSON.parse(buffer.trim().replace(/^data:\s*/, ''));
+                if (finalData.type === 'message') {
+                   setMessages(prev => {
+                     const newMessages = [...prev];
+                     const lastIndex = newMessages.length - 1;
+                     if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+                        newMessages[lastIndex].content += finalData.payload;
+                     } else {
+                        newMessages.push({ role: 'assistant', content: finalData.payload });
+                     }
+                     return newMessages;
+                   });
+                }
+             } catch(e) {}
+          }
+          break;
+        }
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n\n');
+        // Append the new network chunk to the buffer
+        buffer += decoder.decode(value, { stream: true });
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.replace('data: ', ''));
-            
-            if (data.type === 'status') {
-              setAgentStatus(data.payload);
-            } else if (data.type === 'message') {
-              setMessages(prev => {
-                const updated = [...prev, { role: 'assistant', content: data.payload }];
-                setTimeout(scrollToBottom, 50); // <-- Add this
-                return updated;
-              });
-            } else if (data.type === 'action_required') {
-              setMessages(prev => [...prev, { role: 'assistant', content: JSON.stringify({ isActionRequest: true, ...data.payload }) }]);
-            } else if (data.type === 'roadmap_update') {
-              setRoadmap(data.payload);
-            } else if (data.type === 'title_update') {
-              // Automatically update the title if the AI renamed it
-              setActiveSession(prev => ({ ...prev, title: data.payload }));
-              fetchSessions(); // Refresh sidebar
-            } else if (data.type === 'error') {
-              alert(data.payload);
+        // 🚨 THE FIX: Split safely handling both \n\n and \r\n\r\n
+        const parts = buffer.split(/\r?\n\r?\n/);
+        
+        // The last part might be an incomplete network chunk. 
+        buffer = parts.pop();
+
+        for (const part of parts) {
+          const trimmedPart = part.trim();
+          
+          if (trimmedPart.startsWith('data:')) {
+            try {
+              // Strip the "data: " prefix safely
+              const jsonStr = trimmedPart.replace(/^data:\s*/, '');
+              const data = JSON.parse(jsonStr);
+              
+              if (data.type === 'status') {
+                setAgentStatus(data.payload);
+              } else if (data.type === 'message') {
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const lastIndex = newMessages.length - 1;
+                  
+                  if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+                    newMessages[lastIndex] = {
+                      ...newMessages[lastIndex],
+                      content: newMessages[lastIndex].content + data.payload
+                    };
+                  } else {
+                    newMessages.push({ role: 'assistant', content: data.payload });
+                  }
+                  
+                  return newMessages;
+                });
+                setTimeout(scrollToBottom, 50);
+              } else if (data.type === 'action_required') {
+                setMessages(prev => [...prev, { role: 'assistant', content: JSON.stringify({ isActionRequest: true, ...data.payload }) }]);
+              } else if (data.type === 'roadmap_update') {
+                setRoadmap(data.payload);
+              } else if (data.type === 'title_update') {
+                setActiveSession(prev => ({ ...prev, title: data.payload }));
+                fetchSessions();
+              }
+            } catch (err) {
+              console.error('SSE JSON Parse Error:', err, 'Raw string:', trimmedPart);
             }
           }
         }
       }
     } catch (err) {
       console.error('Stream error:', err);
+      alert(`Failed to connect to AI: ${err.message}`);
     } finally {
       setIsProcessing(false);
       setAgentStatus('');

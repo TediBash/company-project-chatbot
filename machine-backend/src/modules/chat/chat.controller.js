@@ -1,4 +1,5 @@
 import { query } from '../../config/db.js';
+import fetch from 'node-fetch';
 
 // GET /api/chat/sessions
 export const getSessions = async (req, res) => {
@@ -150,115 +151,76 @@ export const getSessionMessages = async (req, res) => {
 };
 
 
-// POST /api/chat/sessions/:id/stream
-// SSE Endpoint: Handles sending a message, showing typing status, and the agent loop
-export const streamMessage = async (req, res) => {
-  const { id } = req.params;
-  const { content } = req.body;
-  const companyId = req.tenant.companyId;
 
-  // 1. Setup Server-Sent Events (SSE) Headers for real-time streaming
+
+// POST /api/chat/sessions/:id/stream
+// Pure SSE Proxy: Forwards the request to Python and pipes the stream back
+export const streamMessage = async (req, res) => {
+  const { id: sessionId } = req.params;
+  const { content } = req.body;
+  
+  // 1. Extract the strict security context from the Node.js auth middleware
+  const companyId = req.tenant.companyId;
+  const userId = req.user.id;
+  const userRole = req.user.visibility; // e.g., 'full', 'technician', 'commercial'
+  const authHeader = req.headers.authorization; // The Bearer JWT
+
+  // 2. Setup Express SSE Headers for the React Client
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
   try {
-    // 2. Save the User's Message to DB
-    await query(
-      `INSERT INTO app_chat.chat_messages (session_id, role, content) VALUES ($1, 'user', $2)`,
-      [id, content]
-    );
+    // 3. Construct the Payload for Python
+    // Notice we do NOT send the chat history. Python will fetch that itself using the sessionId.
+    const pythonPayload = {
+      session_id: sessionId,
+      company_id: companyId,
+      user_id: userId,
+      role: userRole,
+      message: content
+    };
 
-    // 3. Emit "Typing/Processing" Status to UI
-    res.write(`data: ${JSON.stringify({ type: 'status', payload: 'Agent is analyzing request...' })}\n\n`);
-
-    // ==========================================
-    // 🤖 AGENT LLM LOOP (Mocked Implementation)
-    // Here you would pass the chat history to OpenAI/Anthropic
-    // ==========================================
+    // 4. Open the connection to the Python AI Engine
+    const pythonApiUrl = process.env.PYTHON_API_URL || 'http://127.0.0.1:8000';
     
-    // Simulate LLM processing time
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const pythonResponse = await fetch(`${pythonApiUrl}/api/v1/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader // Pass the JWT so Python can cryptographically verify it if needed
+      },
+      body: JSON.stringify(pythonPayload)
+    });
 
-    // Example AI logic: Let's pretend the user asked for a spare part.
-    // The AI determines it needs to call the `create_commercial_request` tool.
-    const requiresAction = content.toLowerCase().includes('order') || content.toLowerCase().includes('quote');
-
-    if (requiresAction) {
-      // 4a. HUMAN IN THE LOOP (HITL)
-      res.write(`data: ${JSON.stringify({ type: 'status', payload: 'Preparing commercial request...' })}\n\n`);
-      
-      const actionPayload = {
-        action: 'create_commercial_request',
-        details: { type: 'Spare Parts', urgency: 'Urgent', title: 'Requested via AI Chat' }
-      };
-
-      // Save the AI's request for confirmation to the DB so it persists on reload
-      await query(
-        `INSERT INTO app_chat.chat_messages (session_id, role, content) VALUES ($1, 'assistant', $2)`,
-        [id, JSON.stringify({ isActionRequest: true, ...actionPayload })]
-      );
-
-      // Emit the action requirement to the frontend so it can render "Approve/Reject" buttons
-      res.write(`data: ${JSON.stringify({ type: 'action_required', payload: actionPayload })}\n\n`);
+    if (!pythonResponse.ok) {
+      console.error(`[Proxy Error] Python Engine returned status: ${pythonResponse.status}`);
+      res.write(`data: ${JSON.stringify({ type: 'error', payload: 'AI Service is currently unavailable.' })}\n\n`);
       return res.end();
-    } 
-
-    // 4b. STANDARD TEXT RESPONSE
-    res.write(`data: ${JSON.stringify({ type: 'status', payload: 'Generating response...' })}\n\n`);
-    
-    const finalAnswer = "Based on the manual for your machine, you should first check the pneumatic air pressure gauge. Is it reading at least 6 bar?";
-
-    // Save final answer to DB
-    await query(
-      `INSERT INTO app_chat.chat_messages (session_id, role, content) VALUES ($1, 'assistant', $2)`,
-      [id, finalAnswer]
-    );
-
-    // Stream the final text to the frontend
-    res.write(`data: ${JSON.stringify({ type: 'message', payload: finalAnswer })}\n\n`);
-
-    // Update the title if it is first message
-    const messageCountRes = await query(`SELECT COUNT(*) FROM app_chat.chat_messages WHERE session_id = $1`, [id]);
-    if (parseInt(messageCountRes.rows[0].count) === 1) {
-        
-        // Background Task: Do not await this, let it run invisibly!
-        (async () => {
-            try {
-                // Ask the LLM: "Generate a 3-5 word title for a chat that starts with this message: {content}"
-                const aiGeneratedTitle = "Capping Chuck Calibration"; // Mocked LLM response
-                
-                // Overwrite the default "Conversation #4" title
-                await query(`UPDATE app_chat.chat_sessions SET title = $1 WHERE session_id = $2`, [aiGeneratedTitle, id]);
-                
-                // Push an SSE event to tell the frontend to update the title in the UI instantly
-                res.write(`data: ${JSON.stringify({ type: 'title_update', payload: aiGeneratedTitle })}\n\n`);
-            } catch (e) {
-                console.error("Auto-title generation failed", e);
-            }
-        })();
     }
 
-    // 5. Background Task: Update the Roadmap (Non-blocking)
-    // The LLM can generate a new JSON structure based on the new state
+    // 5. Pipe the SSE stream natively from Python -> Node.js -> React Frontend
+    // This allows the "typing" effect to work seamlessly without Node.js buffering the response
+    if (pythonResponse.body) {
+      pythonResponse.body.on('data', (chunk) => {
+        res.write(chunk);
+      });
 
-    const updatedRoadmap = {
-      objective: "Troubleshoot System",
-      steps: [{ id: 1, task: "Check pneumatic air pressure", status: "pending" }]
-    };
-    await query(
-      `UPDATE app_chat.chat_roadmaps SET roadmap_json = $1, last_updated = CURRENT_TIMESTAMP WHERE session_id = $2`,
-      [updatedRoadmap, id]
-    );
-    
-    // Push the updated roadmap to the UI so the sidebar updates instantly
-    res.write(`data: ${JSON.stringify({ type: 'roadmap_update', payload: updatedRoadmap })}\n\n`);
+      pythonResponse.body.on('end', () => {
+        res.end();
+      });
 
-    res.end();
+      pythonResponse.body.on('error', (err) => {
+        console.error('[Proxy Stream Error]', err);
+        res.end();
+      });
+    } else {
+      res.end();
+    }
 
   } catch (error) {
-    console.error('[Chat Stream Error]', error);
-    res.write(`data: ${JSON.stringify({ type: 'error', payload: 'The agent encountered a critical error.' })}\n\n`);
+    console.error('[Chat Proxy Fatal Error]', error);
+    res.write(`data: ${JSON.stringify({ type: 'error', payload: 'Failed to connect to the AI Engine.' })}\n\n`);
     res.end();
   }
 };
@@ -266,48 +228,49 @@ export const streamMessage = async (req, res) => {
 
 // POST /api/chat/sessions/:id/action
 // Resolves the "Human in the Loop" confirmation
+// POST /api/chat/sessions/:id/action
+// Proxy HITL (Human-in-the-Loop) resolution to Python
 export const confirmAction = async (req, res) => {
-  const { id } = req.params;
+  const { id: sessionId } = req.params;
   const { action, details, approved } = req.body;
+  
   const companyId = req.tenant.companyId;
+  const userId = req.user.id;
+  const authHeader = req.headers.authorization;
 
   try {
-    if (!approved) {
-      // User clicked "Reject" on the UI
-      await query(
-        `INSERT INTO app_chat.chat_messages (session_id, role, content) VALUES ($1, 'user', $2)`,
-        [id, `I have rejected the action: ${action}`]
-      );
-      return res.json({ message: 'Action cancelled. The agent has been notified.' });
+    const pythonApiUrl = process.env.PYTHON_API_URL || 'http://127.0.0.1:8000';
+    
+    // Proxy the user's decision to Python
+    const pythonResponse = await fetch(`${pythonApiUrl}/api/v1/chat/action`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      body: JSON.stringify({
+        session_id: sessionId,
+        company_id: companyId,
+        user_id: userId,
+        action,
+        details,
+        approved
+      })
+    });
+
+    if (!pythonResponse.ok) {
+      return res.status(500).json({ message: 'AI Engine failed to process the action.' });
     }
 
-    // 1. User clicked "Approve" - Execute the actual backend logic!
-    if (action === 'create_commercial_request') {
-      await query(
-        `INSERT INTO app_commercial.commercial_requests (ticket_number, company_id, title, type, urgency) 
-         VALUES ('REQ-AI-100', $1, $2, $3, $4)`,
-        [companyId, details.title, details.type, details.urgency]
-      );
-    }
-
-    // 2. Inform the LLM context that the tool succeeded
-    await query(
-      `INSERT INTO app_chat.chat_messages (session_id, role, content) VALUES ($1, 'tool', $2)`,
-      [id, `Success: Action ${action} completed.`]
-    );
-
-    // 3. Save the final assistant acknowledgment
-    const ackMessage = "I have successfully submitted the commercial request for you! You can track it on your Commercial dashboard.";
-    await query(
-      `INSERT INTO app_chat.chat_messages (session_id, role, content) VALUES ($1, 'assistant', $2)`,
-      [id, ackMessage]
-    );
-
-    res.json({ success: true, message: ackMessage });
+    // Python executes the tool, saves the DB records, and returns a success string
+    const data = await pythonResponse.json();
+    
+    // Return the AI's acknowledgment back to React
+    res.json({ success: true, message: data.message });
 
   } catch (error) {
-    console.error('[Action Confirmation Error]', error);
-    res.status(500).json({ message: 'Failed to execute action.' });
+    console.error('[Action Proxy Error]', error);
+    res.status(500).json({ message: 'Failed to communicate with AI Engine.' });
   }
 };
 

@@ -29,3 +29,10 @@ Navigate to the backend directory:
 ```bash
 cd arol-backend
 npm install
+```
+
+### 3. Ai-Engine Start
+```bash
+cd machine-ai-engine
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
