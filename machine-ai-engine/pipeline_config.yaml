@@ -1,0 +1,22 @@
+# pipeline_config.yaml
+
+memory:
+  short_term_enabled: true
+  long_term_enabled: false      # Turn on later when we build the Summarizer
+  roadmap_enabled: true
+  max_history_messages: 6       # Keep context window small and fast
+
+rag:
+  enabled: true
+  top_k: 3
+  reranking_enabled: false      # Turn on later for higher accuracy, higher latency
+
+budget:
+  max_iterations_per_answer: 3  # If the Critic Agent rejects the draft 3 times, fallback to human error message
+  max_tokens_per_answer: 2000
+  max_cost_per_answer: 0.02     # Hard cap to prevent infinite loop spending
+
+control:
+  guardrails_enabled: true      # Checks for prompt injection or policy violations
+  validate_response_enabled: true # The Critic Agent (The self-correction loop)
+  use_intent_router: true       # Distinguishes Commercial vs Technical queries
