@@ -1,20 +1,30 @@
 # app/pipeline/executor.py
 import asyncio
 from typing import AsyncGenerator, Dict, Any
+from pydantic import BaseModel, Field
+
 from app.pipeline.config import active_pipeline
 from app.pipeline.memory import MemoryPipelineManager
 from app.rag.provider import RAGPipelineProvider
 from app.agents.router import IntentRouter
 from app.agents.specialized import TechnicalAgent, CommercialAgent, OperationalAgent, GeneralAgent
+from app.llm.client import UniversalLLMClient
+from app.prompts.registry import prompt_registry
+
+class CriticEvaluation(BaseModel):
+    is_valid: bool = Field(description="True if the draft safely and accurately answers the user.")
+    feedback: str = Field(description="Reasoning or instructions for the agent if rejected. Empty if valid.")
 
 class CognitiveLoopExecutor:
     def __init__(self, session_id: str, company_id: str, user_id: str):
         self.session_id = session_id
         self.company_id = company_id
         self.user_id = user_id
+        
         self.memory_manager = MemoryPipelineManager()
         self.rag_provider = RAGPipelineProvider()
         self.router = IntentRouter()
+        self.llm = UniversalLLMClient()
         
         self.agents = {
             "technical": TechnicalAgent(),
@@ -23,29 +33,14 @@ class CognitiveLoopExecutor:
             "general": GeneralAgent()
         }
         
-        # Budget tracking
         self.iteration_count = 0
-        self.total_tokens = 0
-        self.total_cost = 0.0
-
-    async def _mock_critic_evaluation(self, draft: str) -> tuple[bool, str]:
-        """
-        Placeholder for the Validate Response Agent.
-        In production, this asks a fast LLM: "Does this draft answer the user's question accurately?"
-        """
-        await asyncio.sleep(1) # Simulate LLM thinking
-        # For testing the loop, let's pretend it fails the first time, but passes the second time.
-        if self.iteration_count == 1:
-            return False, "You forgot to mention safety precautions before adjusting the valve."
-        return True, "Excellent response."
 
     async def execute(self, user_query: str) -> AsyncGenerator[Dict[str, Any], None]:
         try:
             # 1. Guardrails
             if active_pipeline.control.guardrails_enabled:
                 yield {"type": "status", "payload": "Running security guardrails..."}
-                await asyncio.sleep(0.2)
-
+                
             # 2. Intent Routing
             target_agent_name = "general"
             if active_pipeline.control.use_intent_router:
@@ -55,52 +50,89 @@ class CognitiveLoopExecutor:
             
             selected_agent = self.agents[target_agent_name]
 
-            # 3. Memory & RAG (Only for Technical/Operational queries)
-            context = {"system_prompt": "", "messages": []}
-            if target_agent_name in ["technical", "general"]:
-                yield {"type": "status", "payload": "Assembling memory & RAG context..."}
-                context = await self.memory_manager.assemble_context(
-                    self.session_id, self.company_id, "You are an AROL Assistant."
-                )
-                if active_pipeline.rag.enabled and target_agent_name == "technical":
-                    rag_docs = self.rag_provider.retrieve_context(user_query)
-                    if rag_docs:
-                        rag_block = self.rag_provider.format_system_prompt_block(rag_docs)
-                        context["system_prompt"] += f"\n{rag_block}"
+            # 3. Context Assembly
+            yield {"type": "status", "payload": "Assembling memory context..."}
+            
+            # FIX: Base prompt is now handled by Jinja2 templates, so we pass an empty string here.
+            context = await self.memory_manager.assemble_context(
+                self.session_id, self.company_id, base_system_prompt=""
+            )
+            
+            if active_pipeline.rag.enabled and target_agent_name == "technical":
+                rag_docs = self.rag_provider.retrieve_context(user_query)
+                if rag_docs:
+                    context["rag_blocks"] = self.rag_provider.format_system_prompt_block(rag_docs)
 
-            # 4. The Cognitive Loop (Drafting)
-            final_draft = None
+            # 4. The Cognitive Loop (Self-Correcting)
+            final_draft_text = ""
             
             while self.iteration_count < active_pipeline.budget.max_iterations_per_answer:
                 self.iteration_count += 1
-                yield {"type": "status", "payload": f"Agent is generating response..."}
+                yield {"type": "status", "payload": f"Drafting response (Attempt {self.iteration_count})..."}
                 
-                # The Agent generates a draft (can be string or Tool Dict)
-                draft_response = await selected_agent.draft_response(user_query, context)
+                response_obj = await selected_agent.draft_response(user_query, context)
                 
-                # If the agent wants to trigger a HITL Tool, break immediately and yield it
-                if isinstance(draft_response, dict) and draft_response.get("is_tool_call"):
+                # A. Handle Tool Calls (HITL) immediately
+                if isinstance(response_obj, dict) and response_obj.get("is_tool_call"):
                     yield {"type": "status", "payload": "Action requires human approval..."}
-                    yield {"type": "action_required", "payload": draft_response["payload"]}
-                    return # Exit early, we wait for human input!
+                    yield {"type": "action_required", "payload": response_obj["payload"]}
+                    return 
+                
+                # B. Buffer the text stream to evaluate it
+                draft_text = ""
+                async for chunk in response_obj:
+                    draft_text += chunk
+                    
+                # C. Bypass Critic if disabled
+                if not active_pipeline.control.validate_response_enabled:
+                    final_draft_text = draft_text
+                    break
 
-                # Otherwise, it's text. Evaluate with Critic.
-                if active_pipeline.control.validate_response_enabled:
-                    yield {"type": "status", "payload": "Critic Agent validating response..."}
-                    await asyncio.sleep(0.3)
-                    final_draft = draft_response # Assuming valid for now
+                # D. Ask the Critic Agent
+                yield {"type": "status", "payload": "Critic Agent validating response..."}
+                
+                critic_vars = {"user_query": user_query, "agent_draft": draft_text}
+                critic_prompt = prompt_registry.render("critic", critic_vars)
+                critic_msgs = [
+                    {"role": "system", "content": critic_prompt.system_message},
+                    {"role": "user", "content": critic_prompt.user_message}
+                ]
+                
+                evaluation: CriticEvaluation = await self.llm.generate_structured(
+                    model_name=active_pipeline.llm_routing.critic_model,
+                    messages=critic_msgs,
+                    response_schema=CriticEvaluation,
+                    temperature=critic_prompt.model_defaults.temperature or 0.0
+                )
+                
+                if evaluation and evaluation.is_valid:
+                    yield {"type": "status", "payload": "Response validated successfully."}
+                    final_draft_text = draft_text
                     break
                 else:
-                    final_draft = draft_response
-                    break
+                    feedback_msg = evaluation.feedback if evaluation else "Unknown validation failure."
+                    yield {"type": "status", "payload": f"Critic rejected: {feedback_msg}"}
+                    
+                    # INJECT THE FEEDBACK SO THE AGENT LEARNS ON THE NEXT ITERATION!
+                    if "messages" not in context:
+                        context["messages"] = []
+                    context["messages"].append({"role": "assistant", "content": draft_text})
+                    context["messages"].append({
+                        "role": "user", 
+                        "content": f"SYSTEM FEEDBACK: Your draft was rejected. Reason: {feedback_msg}. Rewrite your response to fix this."
+                    })
+                    
+            if not final_draft_text:
+                final_draft_text = "I am unable to generate a response that passes safety validations. Please consult a human technician."
 
-            # 5. Stream Final Text to UI
+            # 5. Stream Final Approved Text to UI
             yield {"type": "status", "payload": "Transmitting..."}
-            if final_draft and isinstance(final_draft, str):
-                words = final_draft.split(" ")
-                for word in words:
-                    yield {"type": "message", "payload": word + " "}
-                    await asyncio.sleep(0.05)
+            
+            # Simulate streaming the buffered text to keep the UI animation smooth
+            words = final_draft_text.split(" ")
+            for word in words:
+                yield {"type": "message", "payload": word + " "}
+                await asyncio.sleep(0.02)
 
         except Exception as e:
             print(f"[Executor Error] {e}")

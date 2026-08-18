@@ -32,7 +32,12 @@ endpoints:
   ollama_api_base: "http://localhost:11434"    # Local Ollama endpoint
 
 llm_routing:
-  planner_model: "gemini/gemini-1.5-pro"
-  worker_model: "ollama/qwen2.5:7b"
-  router_model: "ollama/llama3.1:8b"
-  critic_model: "gemini/gemini-1.5-flash"
+  planner_model: "ollama/llama3"
+  worker_model: "ollama/llama3"
+  router_model: "ollama/llama3"
+  critic_model: "ollama/llama3"
+
+    #planner_model: "gemini/gemini-1.5-pro"
+  #worker_model: "ollama/qwen2.5:7b"
+  #router_model: "ollama/llama3"
+  #critic_model: "gemini/gemini-1.5-flash"

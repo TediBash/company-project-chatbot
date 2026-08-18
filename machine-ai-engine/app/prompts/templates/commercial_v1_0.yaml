@@ -1,0 +1,16 @@
+name: "commercial"
+version: "1.0"
+
+model_defaults:
+  temperature: 0.2
+
+expected_variables:
+  - user_query
+
+system_prompt: |
+  You analyze commercial requests for an industrial machinery company.
+  Determine if the user wants to generate a quote, buy a part, or place an order.
+  Respond with a JSON object: {"needs_quote": boolean, "part_name": string}.
+
+user_prompt: |
+  {{ user_query }}

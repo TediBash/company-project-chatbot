@@ -1,68 +1,112 @@
 # app/agents/specialized.py
-import asyncio
 from typing import Dict, Any, Union, AsyncGenerator
+from pydantic import BaseModel, Field
+
 from app.agents.tools import ToolRegistry
 from app.llm.client import UniversalLLMClient
+from app.pipeline.config import active_pipeline
+from app.prompts.registry import prompt_registry
+
+class CommercialDecision(BaseModel):
+    needs_quote: bool = Field(description="True ONLY if the user explicitly wants to buy, order, or get a quote.")
+    part_name: str = Field(default="General Spare Part", description="The specific part to buy.")
+    reasoning: str = Field(description="A brief explanation of why a quote is or is not needed.")
 
 class BaseAgent:
-    async def draft_response(self, query: str, context: Dict[str, Any]) -> Union[str, Dict[str, Any]]:
-        raise NotImplementedError
-
-WORKER_MODEL = "ollama/qwen2.5:7b" 
-
-class TechnicalAgent(BaseAgent):
     def __init__(self):
         self.llm = UniversalLLMClient()
+        self.worker_model = active_pipeline.llm_routing.worker_model
 
-    async def draft_response(self, query: str, context: Dict[str, Any]) -> AsyncGenerator[str, None]:
-        """
-        Uses the context (RAG + Roadmap) to generate a streaming response 
-        via the local Qwen/Ollama worker.
-        """
-        # 1. Format the messages array for the LLM
-        messages = [
-            {"role": "system", "content": context["system_prompt"]},
-        ]
+    async def draft_response(self, query: str, context: Dict[str, Any]) -> Union[AsyncGenerator[str, None], Dict[str, Any]]:
+        raise NotImplementedError
+
+class TechnicalAgent(BaseAgent):
+    """Feeds RAG excerpts and Roadmap state into the Jinja2 template and streams the answer."""
+    async def draft_response(self, query: str, context: Dict[str, Any]) -> Union[AsyncGenerator[str, None], Dict[str, Any]]:
         
-        # Add short-term history if available
+        variables = {
+            "user_query": query,
+            "rag_context": context.get("rag_blocks", ""),
+            "roadmap_state": context.get("system_prompt", "")
+        }
+        
+        prompt = prompt_registry.render("technical", variables)
+        
+        messages = [{"role": "system", "content": prompt.system_message}]
         if "messages" in context:
             messages.extend(context["messages"])
-            
-        # Add the current user query
-        messages.append({"role": "user", "content": query})
+        messages.append({"role": "user", "content": prompt.user_message})
 
-        # 2. Return the active stream
         return self.llm.stream_response(
-            model_name=WORKER_MODEL, 
+            model_name=self.worker_model,
             messages=messages,
-            temperature=0.2 # Low temp for technical accuracy
+            temperature=prompt.model_defaults.temperature or 0.1
         )
 
 class OperationalAgent(BaseAgent):
-    async def draft_response(self, query: str, context: Dict[str, Any]) -> Union[str, Dict[str, Any]]:
-        # This agent autonomously calls the SQL tool
-        await asyncio.sleep(0.5)
+    """Executes SQL Tool and injects the raw data into the Jinja2 template."""
+    async def draft_response(self, query: str, context: Dict[str, Any]) -> Union[AsyncGenerator[str, None], Dict[str, Any]]:
+        
         telemetry_data = ToolRegistry.query_telemetry_sql("M-100", "motor_temp")
         
-        await asyncio.sleep(0.5)
-        return f"I checked the live telemetry. The current status is: {telemetry_data}. You are safely below the warning threshold."
+        variables = {
+            "user_query": query,
+            "telemetry_data": telemetry_data
+        }
+        prompt = prompt_registry.render("operational", variables)
+        
+        messages = [{"role": "system", "content": prompt.system_message}]
+        if "messages" in context:
+            messages.extend(context["messages"])
+        messages.append({"role": "user", "content": prompt.user_message})
+
+        return self.llm.stream_response(
+            model_name=self.worker_model,
+            messages=messages,
+            temperature=prompt.model_defaults.temperature or 0.2
+        )
 
 class CommercialAgent(BaseAgent):
-    async def draft_response(self, query: str, context: Dict[str, Any]) -> Union[str, Dict[str, Any]]:
-        # If the user wants a quote, the agent triggers the HITL tool instead of text
-        await asyncio.sleep(1.0)
+    """Uses LLM structured output to evaluate if a quote is needed, otherwise falls back to chat."""
+    async def draft_response(self, query: str, context: Dict[str, Any]) -> Union[AsyncGenerator[str, None], Dict[str, Any]]:
         
-        if "quote" in query.lower() or "order" in query.lower():
-            # Trigger the Human-In-The-Loop approval card on the frontend
+        variables = {"user_query": query}
+        prompt = prompt_registry.render("commercial", variables)
+        
+        messages = [
+            {"role": "system", "content": prompt.system_message},
+            {"role": "user", "content": prompt.user_message}
+        ]
+        
+        # 1. Structured decision for Tool Execution
+        decision: CommercialDecision = await self.llm.generate_structured(
+            model_name=self.worker_model, 
+            messages=messages, 
+            response_schema=CommercialDecision,
+            temperature=prompt.model_defaults.temperature or 0.1
+        )
+
+        # 2. Trigger HITL Tool if explicitly requested
+        if decision and decision.needs_quote:
+            print(f"[Commercial Agent] Triggering Quote. Reason: {decision.reasoning}")
             return ToolRegistry.create_commercial_request(
-                title="Spare Part Order: Capping Head O-Rings",
+                title=f"Spare Part Order: {decision.part_name}",
                 request_type="spare_parts",
-                urgency="high"
+                urgency="medium"
             )
             
-        return "Our commercial team can help you with pricing. Would you like me to generate a formal request for you?"
+        # 3. Standard chat fallback
+        fallback_msg = [
+            {"role": "system", "content": "You are a commercial agent. Answer the inquiry generally without generating a quote."}, 
+            {"role": "user", "content": query}
+        ]
+        return self.llm.stream_response(model_name=self.worker_model, messages=fallback_msg)
 
 class GeneralAgent(BaseAgent):
-    async def draft_response(self, query: str, context: Dict[str, Any]) -> Union[str, Dict[str, Any]]:
-        await asyncio.sleep(0.5)
-        return "I am the AROL Support Assistant. How can I help you today?"
+    """Handles standard greetings and fallbacks."""
+    async def draft_response(self, query: str, context: Dict[str, Any]) -> Union[AsyncGenerator[str, None], Dict[str, Any]]:
+        # For simplicity, fallback uses a direct message without registry rendering here
+        messages = [{"role": "system", "content": "You are a helpful AROL support assistant."}]
+        messages.append({"role": "user", "content": query})
+        
+        return self.llm.stream_response(model_name=self.worker_model, messages=messages, temperature=0.4)
