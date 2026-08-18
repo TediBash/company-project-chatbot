@@ -1,7 +1,7 @@
 # app/rag/ingestion.py
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-import fitz  # PyMuPDF
+import pymupdf as fitz
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
