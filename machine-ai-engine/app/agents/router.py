@@ -1,11 +1,10 @@
 # app/agents/router.py
-from typing import Literal
+from typing import Literal, Any
 from pydantic import BaseModel, Field
 from app.llm.client import UniversalLLMClient
 from app.pipeline.config import active_pipeline
 from app.prompts.registry import prompt_registry
 
-# 1. Define the strict JSON schema we want the LLM to output
 class IntentClassification(BaseModel):
     intent: Literal["technical", "commercial", "operational", "general"] = Field(
         description="The classified intent of the user's message."
@@ -15,17 +14,11 @@ class IntentClassification(BaseModel):
     )
 
 class IntentRouter:
-    """Uses a fast LLM to classify user queries and route them to specialized agents."""
-    
     def __init__(self):
         self.llm = UniversalLLMClient()
         self.model = active_pipeline.llm_routing.router_model
 
-    async def route(self, query: str, user_role: str = "technician") -> Literal["technical", "commercial", "operational", "general"]:
-        """
-        Sends the query to the Router LLM and returns the exact agent name.
-        """
-        # Render the prompt dynamically using Jinja2
+    async def route(self, query: str, user_role: str = "technician", tracer: Any = None) -> Literal["technical", "commercial", "operational", "general"]:
         variables = {
             "user_query": query,
             "user_role": user_role
@@ -39,7 +32,6 @@ class IntentRouter:
 
         print(f"[Router] Analyzing intent using {self.model}...")
         
-        # Call the structured generation method to enforce the Pydantic schema
         result: IntentClassification = await self.llm.generate_structured(
             model_name=self.model,
             messages=messages,
@@ -47,10 +39,18 @@ class IntentRouter:
             temperature=prompt.model_defaults.temperature or 0.0
         )
 
+        # Trace the LLM's exact classification logic
+        if tracer and result:
+            tracer.add_llm_step(
+                step_name="Intent Classification",
+                model_name=self.model,
+                messages=messages,
+                response=result.model_dump_json(),
+                structured_output=result.model_dump()
+            )
+
         if result:
             print(f"[Router] Classified as: {result.intent.upper()} (Reason: {result.reasoning})")
             return result.intent
             
-        # Fallback if the LLM fails or timeouts
-        print("[Router] LLM failed to classify. Falling back to 'general'.")
         return "general"
