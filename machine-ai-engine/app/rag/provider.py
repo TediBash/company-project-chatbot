@@ -17,17 +17,18 @@ class RAGPipelineProvider:
         self.vector_store = VectorStoreManager()
         self.reranker = CrossEncoderReRanker()
 
-    def ingest_manual(self, file_path: str | Path, machine_model: Optional[str] = None) -> int:
-        """Helper to index a technical manual."""
-        extra_meta = {"machine_model": machine_model} if machine_model else None
+    def ingest_manual(self, file_path: str | Path, serial_number: Optional[str] = None) -> int:
+        """Helper to index a technical manual strictly by its serial number."""
+        extra_meta = {"serial_number": serial_number} if serial_number else None
         chunks = self.ingestion.chunk_document(file_path, extra_metadata=extra_meta)
         return self.vector_store.add_chunks(chunks)
 
     def retrieve_context(
-        self, query_text: str, machine_model: Optional[str] = None
+        self, query_text: str, serial_number: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Retrieves relevant manual snippets adhering to active pipeline configs.
+        Filters strictly by the physical machine's serial number.
         """
         if not active_pipeline.rag.enabled:
             return []
@@ -39,7 +40,8 @@ class RAGPipelineProvider:
             else active_pipeline.rag.top_k
         )
 
-        filter_meta = {"machine_model": machine_model} if machine_model else None
+        filter_meta = {"serial_number": serial_number} if serial_number else None
+        
         candidates = self.vector_store.query(
             query_text=query_text,
             top_k=fetch_k,

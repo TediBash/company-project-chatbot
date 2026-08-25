@@ -4,19 +4,17 @@ import uuid
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
-
-# Import the new DB session and model we just created
 from sqlalchemy import select
+
 from app.db.session import AsyncSessionLocal
 from app.db.models import ChatSession
-
 from app.database import db
 from app.pipeline.executor import CognitiveLoopExecutor
 
 router = APIRouter()
 
 # ---------------------------------------------------------
-# NEW: Session Creation Endpoint (Called by React UI/QR Code)
+# Session Creation Endpoint (Called by React UI/QR Code)
 # ---------------------------------------------------------
 class CreateSessionRequest(BaseModel):
     company_id: str
@@ -44,9 +42,8 @@ async def create_chat_session(req: CreateSessionRequest):
         "status": "created"
     }
 
-
 # ---------------------------------------------------------
-# EXISTING: The Streaming Endpoint
+# The Streaming Endpoint (Engine Execution)
 # ---------------------------------------------------------
 class ChatStreamRequest(BaseModel):
     session_id: str
@@ -55,6 +52,7 @@ class ChatStreamRequest(BaseModel):
     role: str
     message: str
     machine_name: str = "Unknown Model"
+    serial_number: str = ""
 
 @router.post("/stream")
 async def chat_stream(req: ChatStreamRequest, request: Request):
@@ -90,9 +88,11 @@ async def chat_stream(req: ChatStreamRequest, request: Request):
             user_id=req.user_id
         )
         
-        # Inject the machine_id directly into the executor so RAG can use it
+        # Inject the Phase 1 RBAC and Machine Lock variables
+        executor.user_role = req.role.lower() # Ensure it's lowercase for the guardrails
         executor.active_machine_id = active_machine_id
         executor.active_machine_name = req.machine_name
+        executor.active_serial_number = str(req.serial_number) if req.serial_number else active_machine_id
         
         final_response_buffer = ""
 

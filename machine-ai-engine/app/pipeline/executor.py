@@ -48,38 +48,84 @@ class CognitiveLoopExecutor:
                 tracer.add_step("Security Guardrails", "system_check", {"status": "passed"})
                 
             # 3. Routing
+            # 3. Routing
             if active_pipeline.control.use_intent_router:
                 yield {"type": "status", "payload": "Classifying query intent..."}
-                target_agent_name = await self.router.route(user_query, tracer=tracer)
+                
+                # Fetch variables for the router
+                user_role = getattr(self, "user_role", "technician")
+                active_machine_name = getattr(self, "active_machine_name", "Unknown Model")
+                active_serial = getattr(self, "active_serial_number", getattr(self, "active_machine_id", "Unknown SN"))
+                
+                target_agent_name = await self.router.route(
+                    query=user_query,
+                    user_role=user_role,
+                    active_machine_name=active_machine_name,
+                    active_serial_number=active_serial,
+                    system_date="2026-08-05",
+                    tracer=tracer
+                )
                 yield {"type": "status", "payload": f"Routed to {target_agent_name.capitalize()} Agent."}
             
+            # =================================================================
+            # NEW: PHASE 1 GUARDRAILS (RBAC & Machine Lock)
+            # =================================================================
+            user_role = getattr(self, "user_role", "technician")
+            
+            # Guardrail A: Block Technicians from Commercial Data
+            if user_role == "technician" and target_agent_name == "commercial":
+                rejection_msg = "Your role as a technician does not permit access to Quotes, Orders, or Commercial data. Please contact an administrator."
+                yield {"type": "message", "payload": rejection_msg}
+                final_draft_text = rejection_msg
+                return  # Instantly jump to 'finally' and save the blocked trace
+                
+            # Guardrail B: Block Commercial from Operational Data 
+            if user_role == "commercial" and target_agent_name == "operational":
+                rejection_msg = "Your role as a commercial user does not permit access to Telemetry, Alarms, or Maintenance data."
+                yield {"type": "message", "payload": rejection_msg}
+                final_draft_text = rejection_msg
+                return 
+
+            # Guardrail C: Strict Machine Lock Interception
+            if target_agent_name == "out_of_scope_machine":
+                active_name = getattr(self, "active_machine_name", "this machine")
+                active_sn = getattr(self, "active_serial_number", getattr(self, "active_machine_id", "Unknown SN"))
+                
+                rejection_msg = f"You are only allowed to ask questions regarding the active machine: {active_name} (SN: {active_sn}). If you want to discuss another machine, please create a new chat."
+                yield {"type": "message", "payload": rejection_msg}
+                final_draft_text = rejection_msg
+                return
+            # =================================================================
+
             tracer.target_agent = target_agent_name
             selected_agent = self.agents[target_agent_name]
 
-            # 4. Context Assembly & RAG (UPDATED FOR METADATA FILTERING)
+            # 4. Context Assembly & RAG
             yield {"type": "status", "payload": "Assembling memory context..."}
             context = await self.memory_manager.assemble_context(
                 self.session_id, self.company_id, base_system_prompt=""
             )
             
+            system_date = "2026-08-05" 
+            context["system_date"] = system_date
+            
             if active_pipeline.rag.enabled and target_agent_name == "technical":
-                # Extract the active machine from the session context (or default to None)
                 active_machine = getattr(self, "active_machine_id", "unknown")
                 active_machine_name = getattr(self, "active_machine_name", "Unknown Model")
+                active_serial = getattr(self, "active_serial_number", active_machine)
                 tracer.machine_id = active_machine
                 
-                # Pass the machine_model to the provider for filtered retrieval
                 rag_docs = self.rag_provider.retrieve_context(
                     query_text=user_query, 
-                    machine_model=active_machine
+                    serial_number=active_serial
                 )
                 
                 machine_directive = (
-                                        f"\n### ACTIVE TARGET MACHINE\n"
-                                        f"You are currently supporting the {active_machine_name} (Serial Number: {active_machine}).\n"
-                                        f"When the user asks what machine they are working on, confidently reply with this exact model name and serial number.\n"
-                                        f"PROACTIVE OFFER: Always remind the user that you have the official manual loaded and offer to help with procedures.\n\n"
-                                    )
+                    f"\n### ACTIVE TARGET MACHINE\n"
+                    f"You are currently supporting the {active_machine_name} (Serial Number: {active_serial}).\n"
+                    f"When the user asks what machine they are working on, confidently reply with this exact model name and serial number.\n"
+                    f"PROACTIVE OFFER: Always remind the user that you have the official manual loaded and offer to help with procedures.\n\n"
+                )
                 
                 if rag_docs:
                     rag_text = self.rag_provider.format_system_prompt_block(rag_docs)
@@ -87,11 +133,10 @@ class CognitiveLoopExecutor:
                 else:
                     context["rag_blocks"] = machine_directive + "No manual excerpts required for this general query."
                     
-
                 tracer.add_step("RAG Retrieval", "vector_search", {
-                                        "machine_filter": active_machine,
-                                        "docs_retrieved": len(rag_docs)
-                                    })
+                    "serial_number": active_serial,
+                    "docs_retrieved": len(rag_docs)
+                })
 
             final_draft_text = ""
             
@@ -100,7 +145,6 @@ class CognitiveLoopExecutor:
                 self.iteration_count += 1
                 yield {"type": "status", "payload": f"Drafting response (Attempt {self.iteration_count})..."}
                 
-                # Fetch Stream and Exact Messages used by the Agent
                 response_obj, agent_msgs = await selected_agent.draft_response(user_query, context, tracer=tracer)
                 
                 if isinstance(response_obj, dict) and response_obj.get("is_tool_call"):
@@ -113,7 +157,6 @@ class CognitiveLoopExecutor:
                 async for chunk in response_obj:
                     draft_text += chunk
                     
-                # Log the Drafting LLM Call now that the stream has finished
                 tracer.add_llm_step(
                     step_name=f"Agent Drafting (Iter {self.iteration_count})",
                     model_name=active_pipeline.llm_routing.worker_model,
@@ -160,9 +203,6 @@ class CognitiveLoopExecutor:
                     context["messages"].append({"role": "assistant", "content": draft_text})
                     context["messages"].append({"role": "user", "content": f"SYSTEM FEEDBACK: Your draft was rejected: {feedback_msg}. Rewrite your response to fix this."})
                     
-            # app/pipeline/executor.py (excerpt)
-            # ... (keep everything inside the while loop the same) ...
-            
             if not final_draft_text:
                 final_draft_text = "I am unable to generate a response that passes safety validations."
 
@@ -179,8 +219,7 @@ class CognitiveLoopExecutor:
             
         finally:
             # 3. GUARANTEE EXECUTION
-            # This block runs no matter what happens (success, error, or frontend disconnect).
-            if 'final_draft_text' not in locals():
+            if 'final_draft_text' not in locals() or not final_draft_text:
                 final_draft_text = "[Stream Interrupted]"
                 
             await tracer.save_trajectory(final_answer=final_draft_text)

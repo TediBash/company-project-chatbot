@@ -13,7 +13,7 @@ class VectorStoreManager:
     def __init__(
         self,
         persist_directory: str = "./data/chroma_db",
-        collection_name: str = "arol_technical_manuals",
+        collection_name: str = "arol_manuals",
         model_name: str = "all-MiniLM-L6-v2",
     ):
         self.persist_directory = Path(persist_directory)

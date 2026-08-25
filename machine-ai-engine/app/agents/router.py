@@ -6,7 +6,7 @@ from app.pipeline.config import active_pipeline
 from app.prompts.registry import prompt_registry
 
 class IntentClassification(BaseModel):
-    intent: Literal["technical", "commercial", "operational", "general"] = Field(
+    intent: Literal["technical", "commercial", "operational", "general", "out_of_scope_machine"] = Field(
         description="The classified intent of the user's message."
     )
     reasoning: str = Field(
@@ -18,10 +18,22 @@ class IntentRouter:
         self.llm = UniversalLLMClient()
         self.model = active_pipeline.llm_routing.router_model
 
-    async def route(self, query: str, user_role: str = "technician", tracer: Any = None) -> Literal["technical", "commercial", "operational", "general"]:
+    async def route(
+        self, 
+        query: str, 
+        user_role: str,
+        active_machine_name: str,
+        active_serial_number: str,
+        system_date: str,
+        tracer: Any = None
+    ) -> Literal["technical", "commercial", "operational", "general", "out_of_scope_machine"]:
+        
         variables = {
             "user_query": query,
-            "user_role": user_role
+            "user_role": user_role,
+            "active_machine_name": active_machine_name,
+            "active_serial_number": active_serial_number,
+            "system_date": system_date
         }
         prompt = prompt_registry.render(name="router", variables=variables)
 
