@@ -15,8 +15,8 @@ yarn-error.log*
 .env.production.local
 
 # Frontend Build Outputs
-/arol-frontend/dist/
-/arol-frontend/build/
+/machine-chatbot/dist/
+/machine-chatbot/build/
 
 # OS / Editor Files
 .DS_Store

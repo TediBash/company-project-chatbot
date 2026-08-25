@@ -65,6 +65,7 @@ class CognitiveLoopExecutor:
             if active_pipeline.rag.enabled and target_agent_name == "technical":
                 # Extract the active machine from the session context (or default to None)
                 active_machine = getattr(self, "active_machine_id", "unknown")
+                active_machine_name = getattr(self, "active_machine_name", "Unknown Model")
                 tracer.machine_id = active_machine
                 
                 # Pass the machine_model to the provider for filtered retrieval
@@ -73,23 +74,24 @@ class CognitiveLoopExecutor:
                     machine_model=active_machine
                 )
                 
+                machine_directive = (
+                                        f"\n### ACTIVE TARGET MACHINE\n"
+                                        f"You are currently supporting the {active_machine_name} (Serial Number: {active_machine}).\n"
+                                        f"When the user asks what machine they are working on, confidently reply with this exact model name and serial number.\n"
+                                        f"PROACTIVE OFFER: Always remind the user that you have the official manual loaded and offer to help with procedures.\n\n"
+                                    )
+                
                 if rag_docs:
                     rag_text = self.rag_provider.format_system_prompt_block(rag_docs)
-                    
-                    machine_directive = (
-                        f"\n### ACTIVE TARGET MACHINE\n"
-                        f"You are currently supporting the machine with Serial Number: {active_machine}.\n"
-                        f"IMPORTANT: You MUST read the excerpts below to find the exact MODEL NAME of this machine. "
-                        f"When the user asks what machine this is, reply with the MODEL NAME, not just the serial number.\n"
-                        f"PROACTIVE OFFER: Always remind the user that you have the official manual loaded and offer to help with procedures.\n\n"
-                    )
-                    
                     context["rag_blocks"] = machine_directive + rag_text
+                else:
+                    context["rag_blocks"] = machine_directive + "No manual excerpts required for this general query."
                     
-                    tracer.add_step("RAG Retrieval", "vector_search", {
-                        "machine_filter": active_machine,
-                        "docs_retrieved": len(rag_docs)
-                    })
+
+                tracer.add_step("RAG Retrieval", "vector_search", {
+                                        "machine_filter": active_machine,
+                                        "docs_retrieved": len(rag_docs)
+                                    })
 
             final_draft_text = ""
             

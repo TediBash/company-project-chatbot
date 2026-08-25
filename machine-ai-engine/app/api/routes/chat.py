@@ -54,6 +54,7 @@ class ChatStreamRequest(BaseModel):
     user_id: str
     role: str
     message: str
+    machine_name: str = "Unknown Model"
 
 @router.post("/stream")
 async def chat_stream(req: ChatStreamRequest, request: Request):
@@ -90,7 +91,8 @@ async def chat_stream(req: ChatStreamRequest, request: Request):
         )
         
         # Inject the machine_id directly into the executor so RAG can use it
-        executor.active_machine_id = active_machine_id 
+        executor.active_machine_id = active_machine_id
+        executor.active_machine_name = req.machine_name
         
         final_response_buffer = ""
 

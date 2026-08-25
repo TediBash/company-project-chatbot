@@ -149,7 +149,7 @@ export const getSessionMessages = async (req, res) => {
 // Pure SSE Proxy: Forwards the request to Python and pipes the stream back
 export const streamMessage = async (req, res) => {
   const { id: sessionId } = req.params;
-  const { content } = req.body;
+  const { content, machine_name } = req.body;
   
   // 1. Extract the strict security context from the Node.js auth middleware
   const companyId = req.tenant.companyId;
@@ -170,7 +170,8 @@ export const streamMessage = async (req, res) => {
       company_id: companyId,
       user_id: userId,
       role: userRole,
-      message: content
+      message: content,
+      machine_name: machine_name || "Unknown Model"
     };
 
     // 4. Open the connection to the Python AI Engine

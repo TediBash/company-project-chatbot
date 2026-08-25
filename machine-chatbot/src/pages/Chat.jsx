@@ -70,16 +70,29 @@ export const ChatPage = () => {
 
   useEffect(() => { if (agentStatus) scrollToBottom(); }, [agentStatus]);
 
-  // NEW: Fetch Available Machines & Handle QR Code Deep Linking
+// Fetch Available Machines & Handle QR Code Deep Linking
   useEffect(() => {
-    // 1. Mock fetch available machines (Replace with your actual API route later)
-    setAvailableMachines([
-      { id: '15610', name: 'TS - EURO PK TWIN CHUTE D' },
-      { id: 'M-100', name: 'Capping Head Standard' },
-      { id: 'M-200', name: 'Rotary Filler Pro' }
-    ]);
+    const fetchMachines = async () => {
+      try {
+        // Fetch machines using your existing Express router
+        const response = await apiClient.get('/machines');
+        
+        // Map the backend data to match the format expected by the React state
+        const formattedMachines = response.data.map(machine => ({
+          id: machine.id, // The database machine_id 
+          serialNumber: machine.serialNumber, // e.g., "15610"
+          name: machine.modelDescription || machine.modelCode || 'Unknown Model'
+        }));
+        
+        setAvailableMachines(formattedMachines);
+      } catch (err) {
+        console.error('Failed to load company machines', err);
+      }
+    };
+    
+    fetchMachines();
 
-    // 2. Check if user arrived via QR Code URL (e.g., /chat?machineId=15610)
+    // Check if user arrived via QR Code URL (e.g., /chat?machineId=15610)
     const urlMachineId = searchParams.get('machineId');
     if (urlMachineId) {
       setSelectedMachine(urlMachineId);
@@ -231,6 +244,8 @@ export const ChatPage = () => {
     try {
       const streamUrl = apiClient.getUri({ url: `/chat/sessions/${sessionId}/stream` });
 
+      const activeMachineName = availableMachines.find(m => m.id === activeSession?.machine_id)?.name || 'Unknown Model';
+
       const response = await fetch(streamUrl, {
         method: 'POST',
         headers: {
@@ -238,7 +253,8 @@ export const ChatPage = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
-          content: messageContent 
+          content: messageContent,
+          machine_name: activeMachineName
         })
       });
 
@@ -488,7 +504,7 @@ export const ChatPage = () => {
                 </svg>
                 {/* Look up the name, fallback to ID if not found */}
                 {availableMachines.find(m => m.id === activeSession.machine_id)?.name || 'Unknown Machine'} 
-                <span className="text-gray-400 font-medium ml-1">(SN: {activeSession.machine_id})</span>
+                <span className="text-gray-400 font-medium ml-1">(SN: {availableMachines.find(m => m.id === activeSession.machine_id)?.serialNumber || activeSession.machine_id})</span>
               </p>
             )}
           </div>
@@ -647,7 +663,9 @@ export const ChatPage = () => {
             >
               <option value="" disabled>-- Select a Target Machine --</option>
               {availableMachines.map(m => (
-                <option key={m.id} value={m.id}>{m.name} (SN: {m.id})</option>
+                <option key={m.id} value={m.id}>
+                  {m.name} (SN: {m.serialNumber || m.id})
+                </option>
               ))}
             </select>
           </div>
