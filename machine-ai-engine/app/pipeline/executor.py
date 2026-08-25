@@ -108,6 +108,8 @@ class CognitiveLoopExecutor:
             
             system_date = "2026-08-05" 
             context["system_date"] = system_date
+            context["auth_token"] = getattr(self, "auth_token", "")
+            context["active_machine_id"] = getattr(self, "active_machine_id", "")
             
             if active_pipeline.rag.enabled and target_agent_name == "technical":
                 active_machine = getattr(self, "active_machine_id", "unknown")

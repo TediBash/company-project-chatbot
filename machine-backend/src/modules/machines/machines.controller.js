@@ -134,3 +134,86 @@ export const updateMachineStatus = async (req, res) => {
     res.status(500).json({ message: 'Failed to update machine status.' });
   }
 };
+
+export const getMachineTelemetry = async (req, res) => {
+  const { id } = req.params;
+  const companyId = req.tenant.companyId;
+
+  try {
+    const sql = `
+      SELECT 
+        ts.timestamp AS "timestamp",
+        ts.operational_status AS "operationalStatus",
+        ts.production_rate_bph AS "productionRateBph",
+        ts.uptime_percentage AS "uptimePercentage",
+        ts.alarm_count AS "alarmCount",
+        ts.temperature_c AS "temperatureC",
+        ts.health_note AS "healthNote"
+      FROM app_operational.telemetry_snapshots ts
+      JOIN app_tenant.machines m ON ts.machine_id = m.machine_id
+      WHERE ts.machine_id = $1 AND m.company_id = $2
+      ORDER BY ts.timestamp DESC
+      LIMIT 10;
+    `;
+    const { rows } = await query(sql, [id, companyId]);
+    res.json(rows);
+  } catch (error) {
+    console.error('[Telemetry GET Error]', error);
+    res.status(500).json({ message: 'Failed to retrieve telemetry data.' });
+  }
+};
+
+export const getMachineAlarms = async (req, res) => {
+  const { id } = req.params;
+  const companyId = req.tenant.companyId;
+
+  try {
+    const sql = `
+      SELECT 
+        a.alarm_id AS "alarmId",
+        a.alarm_code AS "code", 
+        a.severity,
+        a.timestamp,
+        a.alarm_status AS "alarmStatus" 
+      FROM app_operational.alarms a
+      JOIN app_tenant.machines m ON a.machine_id = m.machine_id
+      WHERE a.machine_id = $1 AND m.company_id = $2
+      ORDER BY a.timestamp DESC
+      LIMIT 10;
+    `;
+    const { rows } = await query(sql, [id, companyId]);
+    res.json(rows);
+  } catch (error) {
+    console.error('[Alarms GET Error]', error);
+    res.status(500).json({ message: 'Failed to retrieve alarms.' });
+  }
+};
+
+export const getMachineMaintenance = async (req, res) => {
+  const { id } = req.params;
+  const companyId = req.tenant.companyId;
+
+  try {
+    const sql = `
+      SELECT 
+        mt.ticket_id AS "ticketId",
+        mt.ticket_status AS "status",
+        mt.ticket_type AS "description", 
+        mt.created_date AS "createdAt",
+        mt.priority,
+        mt.owner_role AS "ownerRole",
+        a.alarm_code AS "associatedAlarmCode"
+      FROM app_operational.maintenance_tickets mt
+      JOIN app_tenant.machines m ON mt.machine_id = m.machine_id
+      LEFT JOIN app_operational.alarms a ON mt.alarm_id = a.alarm_id
+      WHERE mt.machine_id = $1 AND m.company_id = $2
+      ORDER BY mt.created_date DESC
+      LIMIT 5;
+    `;
+    const { rows } = await query(sql, [id, companyId]);
+    res.json(rows);
+  } catch (error) {
+    console.error('[Maintenance GET Error]', error);
+    res.status(500).json({ message: 'Failed to retrieve maintenance tickets.' });
+  }
+};

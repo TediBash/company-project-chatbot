@@ -53,6 +53,7 @@ class ChatStreamRequest(BaseModel):
     message: str
     machine_name: str = "Unknown Model"
     serial_number: str = ""
+    auth_token: str = ""
 
 @router.post("/stream")
 async def chat_stream(req: ChatStreamRequest, request: Request):
@@ -66,6 +67,15 @@ async def chat_stream(req: ChatStreamRequest, request: Request):
         
         if not chat_session:
             raise HTTPException(status_code=404, detail="Chat session not found or expired.")
+        
+        extracted_token = getattr(req, "auth_token", "")
+        if not extracted_token:
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                extracted_token = auth_header.split(" ")[1]
+                
+        if not extracted_token:
+            print("[WARNING] No Auth Token found in request body or headers!")
         
         # We now know exactly which machine this user is talking about!
         active_machine_id = chat_session.machine_id
@@ -93,6 +103,7 @@ async def chat_stream(req: ChatStreamRequest, request: Request):
         executor.active_machine_id = active_machine_id
         executor.active_machine_name = req.machine_name
         executor.active_serial_number = str(req.serial_number) if req.serial_number else active_machine_id
+        executor.auth_token = extracted_token
         
         final_response_buffer = ""
 

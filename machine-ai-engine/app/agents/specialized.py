@@ -1,11 +1,19 @@
 # app/agents/specialized.py
 from typing import Dict, Any, Union, AsyncGenerator, Tuple, List
 from pydantic import BaseModel, Field
+import asyncio
 
 from app.agents.tools import ToolRegistry
 from app.llm.client import UniversalLLMClient
 from app.pipeline.config import active_pipeline
 from app.prompts.registry import prompt_registry
+
+from app.tools.operational import (
+    get_machine_configuration,
+    query_telemetry,
+    query_alarms,
+    query_maintenance_tickets
+)
 
 class CommercialDecision(BaseModel):
     needs_quote: bool = Field(description="True ONLY if the user explicitly wants to buy, order, or get a quote.")
@@ -43,17 +51,42 @@ class TechnicalAgent(BaseAgent):
 
 class OperationalAgent(BaseAgent):
     async def draft_response(self, query: str, context: Dict[str, Any], tracer: Any = None) -> Tuple[Union[AsyncGenerator[str, None], Dict[str, Any]], List[Dict[str, Any]]]:
-        # Execute Tool & Log it
-        telemetry_data = ToolRegistry.query_telemetry_sql("M-100", "motor_temp")
+        # 1. Extract session credentials
+        machine_id = context.get("active_machine_id", "unknown")
+        auth_token = context.get("auth_token", "")
+        
+        # 2. Execute all Node.js API Tools Concurrently for maximum speed!
+        config_data, telemetry_data, alarms_data, tickets_data = await asyncio.gather(
+            get_machine_configuration(machine_id, auth_token),
+            query_telemetry(machine_id, auth_token),
+            query_alarms(machine_id, auth_token),
+            query_maintenance_tickets(machine_id, auth_token)
+        )
         
         if tracer:
             tracer.add_step(
-                step_name="SQL Database Tool Execution",
+                step_name="Operational API Tools Execution",
                 action_type="tool_call",
-                details={"target_machine": "M-100", "metric": "motor_temp", "result": telemetry_data}
+                details={
+                    "target_machine": machine_id,
+                    "endpoints_called": ["config", "telemetry", "alarms", "maintenance"],
+                    "responses": {
+                        "config": config_data,
+                        "telemetry": telemetry_data,
+                        "alarms": alarms_data,
+                        "maintenance": tickets_data
+                    }
+                }
             )
         
-        variables = {"user_query": query, "telemetry_data": telemetry_data}
+        # 3. Inject all the data into the prompt template
+        variables = {
+            "user_query": query, 
+            "machine_config": config_data,
+            "telemetry_data": telemetry_data,
+            "alarms_data": alarms_data,
+            "maintenance_data": tickets_data
+        }
         prompt = prompt_registry.render("operational", variables)
         
         messages = [{"role": "system", "content": prompt.system_message}]
