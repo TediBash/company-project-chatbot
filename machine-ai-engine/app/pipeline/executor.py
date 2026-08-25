@@ -56,17 +56,40 @@ class CognitiveLoopExecutor:
             tracer.target_agent = target_agent_name
             selected_agent = self.agents[target_agent_name]
 
-            # 4. Context Assembly & RAG
+            # 4. Context Assembly & RAG (UPDATED FOR METADATA FILTERING)
             yield {"type": "status", "payload": "Assembling memory context..."}
             context = await self.memory_manager.assemble_context(
                 self.session_id, self.company_id, base_system_prompt=""
             )
             
             if active_pipeline.rag.enabled and target_agent_name == "technical":
-                rag_docs = self.rag_provider.retrieve_context(user_query)
+                # Extract the active machine from the session context (or default to None)
+                active_machine = getattr(self, "active_machine_id", "unknown")
+                tracer.machine_id = active_machine
+                
+                # Pass the machine_model to the provider for filtered retrieval
+                rag_docs = self.rag_provider.retrieve_context(
+                    query_text=user_query, 
+                    machine_model=active_machine
+                )
+                
                 if rag_docs:
-                    context["rag_blocks"] = self.rag_provider.format_system_prompt_block(rag_docs)
-                    tracer.add_step("RAG Retrieval", "vector_search", {"docs_retrieved": len(rag_docs)})
+                    rag_text = self.rag_provider.format_system_prompt_block(rag_docs)
+                    
+                    machine_directive = (
+                        f"\n### ACTIVE TARGET MACHINE\n"
+                        f"You are currently supporting the machine with Serial Number: {active_machine}.\n"
+                        f"IMPORTANT: You MUST read the excerpts below to find the exact MODEL NAME of this machine. "
+                        f"When the user asks what machine this is, reply with the MODEL NAME, not just the serial number.\n"
+                        f"PROACTIVE OFFER: Always remind the user that you have the official manual loaded and offer to help with procedures.\n\n"
+                    )
+                    
+                    context["rag_blocks"] = machine_directive + rag_text
+                    
+                    tracer.add_step("RAG Retrieval", "vector_search", {
+                        "machine_filter": active_machine,
+                        "docs_retrieved": len(rag_docs)
+                    })
 
             final_draft_text = ""
             
@@ -135,11 +158,11 @@ class CognitiveLoopExecutor:
                     context["messages"].append({"role": "assistant", "content": draft_text})
                     context["messages"].append({"role": "user", "content": f"SYSTEM FEEDBACK: Your draft was rejected: {feedback_msg}. Rewrite your response to fix this."})
                     
+            # app/pipeline/executor.py (excerpt)
+            # ... (keep everything inside the while loop the same) ...
+            
             if not final_draft_text:
                 final_draft_text = "I am unable to generate a response that passes safety validations."
-
-            # 7. Finalize Trajectory to DB
-            await tracer.save_trajectory(final_answer=final_draft_text)
 
             yield {"type": "status", "payload": "Transmitting..."}
             words = final_draft_text.split(" ")
@@ -149,5 +172,13 @@ class CognitiveLoopExecutor:
 
         except Exception as e:
             print(f"[Executor Error] {e}")
-            await tracer.save_trajectory(f"[FATAL EXECUTOR ERROR: {str(e)}]")
+            final_draft_text = f"[FATAL EXECUTOR ERROR: {str(e)}]"
             yield {"type": "error", "payload": "The AI Engine encountered a fatal error."}
+            
+        finally:
+            # 3. GUARANTEE EXECUTION
+            # This block runs no matter what happens (success, error, or frontend disconnect).
+            if 'final_draft_text' not in locals():
+                final_draft_text = "[Stream Interrupted]"
+                
+            await tracer.save_trajectory(final_answer=final_draft_text)

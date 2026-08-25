@@ -5,6 +5,20 @@ from sqlalchemy import Column, String, Float, Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.db.session import Base
 
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+    __table_args__ = {"schema": "app_chat"}
+    
+    # We use a string ID here like "sess_12345" as defined in our API route
+    id = Column("session_id", UUID(as_uuid=False), primary_key=True)
+    company_id = Column(String(100), nullable=False, index=True)
+    user_id = Column(String(100), nullable=True)
+    
+    # This locks the entire conversation to a specific machine
+    machine_id = Column(String(100), nullable=False, index=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class AITelemetryTrace(Base):
     __tablename__ = "ai_telemetry_traces"
 
@@ -12,6 +26,7 @@ class AITelemetryTrace(Base):
     session_id = Column(String(100), nullable=False, index=True)
     company_id = Column(String(100), nullable=False, index=True)
     user_id = Column(String(100), nullable=True)
+    machine_id = Column(String(100), nullable=False)
     
     # High-level summary
     question = Column(Text, nullable=False)

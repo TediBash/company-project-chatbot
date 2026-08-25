@@ -6,40 +6,32 @@ export const getSessions = async (req, res) => {
   const { search, viewAll, page = 1, limit = 25 } = req.query;
   const offset = (page - 1) * limit;
   
-  // Extract context from the JWT middleware
   const tenantCompanyId = req.tenant.companyId;
   const currentUserId = req.user.id;
-  const currentUserRole = req.user.visibility; // e.g., 'full', 'technician', 'commercial'
+  const currentUserRole = req.user.visibility; 
   const isPlatformOwner = req.tenant.isPlatformOwner;
 
   try {
-    // 1. Base WHERE clause: ALWAYS lock to the current tenant's company
     let whereClause = `WHERE s.company_id = $1`;
     const params = [tenantCompanyId];
     let paramIndex = 2;
 
-    // 2. Role-Based Access Control (Tenant Isolation)
     if (currentUserRole === 'full' && viewAll === 'true') {
-      // Admin requested to see team chats. 
-      // Rule: Show their own chats OR chats from anyone who is NOT an admin.
       whereClause += ` AND (s.user_id = $${paramIndex} OR u.visibility != 'full')`;
       params.push(currentUserId);
       paramIndex++;
     } else if (!isPlatformOwner) {
-      // Standard users (or Admins who didn't explicitly request 'viewAll') only see their own chats
       whereClause += ` AND s.user_id = $${paramIndex}`;
       params.push(currentUserId);
       paramIndex++;
     }
 
-    // 3. Dynamic Search Filter
     if (search) {
       whereClause += ` AND s.title ILIKE $${paramIndex}`;
       params.push(`%${search}%`);
       paramIndex++;
     }
 
-    // 4. Aggregate Total Count Query (Unaffected by LIMIT)
     const statsSql = `
       SELECT COUNT(s.session_id) AS total_sessions
       FROM app_chat.chat_sessions s
@@ -49,11 +41,12 @@ export const getSessions = async (req, res) => {
     const statsRes = await query(statsSql, params);
     const totalSessions = parseInt(statsRes.rows[0].total_sessions) || 0;
 
-    // 5. Paginated Data Query
+    // UPDATED: Added s.machine_id to the SELECT statement
     const dataSql = `
       SELECT 
         s.session_id AS "id",
         s.title,
+        s.machine_id,
         s.created_at AS "createdAt",
         s.updated_at AS "updatedAt",
         s.user_id AS "userId",
@@ -69,7 +62,6 @@ export const getSessions = async (req, res) => {
     const dataParams = [...params, limit, offset];
     const dataRes = await query(dataSql, dataParams);
 
-    // 6. Return Structured Payload
     res.json({
       data: dataRes.rows,
       pagination: {
@@ -91,13 +83,13 @@ export const getSessionDetails = async (req, res) => {
   const companyId = req.tenant.companyId;
 
   try {
+    // UPDATED: Fetch machine_id alongside session_id and title
     const sessionRes = await query(
-      `SELECT session_id, title FROM app_chat.chat_sessions WHERE session_id = $1 AND company_id = $2`, 
+      `SELECT session_id, title, machine_id FROM app_chat.chat_sessions WHERE session_id = $1 AND company_id = $2`, 
       [id, companyId]
     );
     if (sessionRes.rows.length === 0) return res.status(404).json({ message: 'Session not found.' });
 
-    // UPDATE: Fetch ONLY the last 5 messages, ordered backwards, then reverse them in JS
     const limit = 5;
     const messagesRes = await query(
       `SELECT message_id, role, content, created_at 
@@ -113,8 +105,8 @@ export const getSessionDetails = async (req, res) => {
 
     res.json({
       session: sessionRes.rows[0],
-      messages: messagesRes.rows.reverse(), // Reverse to display chronologically in the UI
-      hasMore: messagesRes.rows.length === limit, // Tell the frontend if more exist
+      messages: messagesRes.rows.reverse(), 
+      hasMore: messagesRes.rows.length === limit, 
       roadmap: roadmapRes.rows[0]?.roadmap_json || { steps: [] }
     });
   } catch (error) {
@@ -275,32 +267,36 @@ export const confirmAction = async (req, res) => {
 };
 
 // POST /api/chat/sessions
-// Creates a new chat session. If no title is provided, generates an incremental default.
 export const createSession = async (req, res) => {
-  const { title } = req.body;
+  // UPDATED: Extract machine_id from the React frontend payload
+  const { title, machine_id } = req.body;
   const companyId = req.tenant.companyId;
   const userId = req.user.id;
+
+  if (!machine_id) {
+    return res.status(400).json({ message: 'A machine_id is required to start a diagnostic session.' });
+  }
 
   try {
     let finalTitle = title;
     
-    // If no title is provided, generate an incremental default (e.g., "Conversation #4")
     if (!finalTitle || finalTitle.trim() === '') {
       const countRes = await query(
         `SELECT COUNT(session_id) FROM app_chat.chat_sessions WHERE user_id = $1`,
         [userId]
       );
       const previousChatCount = parseInt(countRes.rows[0].count, 10) || 0;
-      finalTitle = `Conversation #${previousChatCount + 1}`;
+      finalTitle = `Diagnostic #${previousChatCount + 1}`;
     }
 
+    // UPDATED: Insert machine_id into the database and return it
     const sql = `
-      INSERT INTO app_chat.chat_sessions (company_id, user_id, title)
-      VALUES ($1, $2, $3)
-      RETURNING session_id AS "id", title, created_at AS "createdAt", updated_at AS "updatedAt"
+      INSERT INTO app_chat.chat_sessions (company_id, user_id, title, machine_id)
+      VALUES ($1, $2, $3, $4)
+      RETURNING session_id AS "id", title, machine_id, created_at AS "createdAt", updated_at AS "updatedAt"
     `;
     
-    const { rows } = await query(sql, [companyId, userId, finalTitle]);
+    const { rows } = await query(sql, [companyId, userId, finalTitle, machine_id]);
     
     res.status(201).json(rows[0]);
   } catch (error) {

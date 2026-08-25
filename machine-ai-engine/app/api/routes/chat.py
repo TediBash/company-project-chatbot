@@ -1,13 +1,53 @@
 # app/api/routes/chat.py
 import json
-from fastapi import APIRouter, Request
+import uuid
+from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
+
+# Import the new DB session and model we just created
+from sqlalchemy import select
+from app.db.session import AsyncSessionLocal
+from app.db.models import ChatSession
+
 from app.database import db
 from app.pipeline.executor import CognitiveLoopExecutor
 
 router = APIRouter()
 
+# ---------------------------------------------------------
+# NEW: Session Creation Endpoint (Called by React UI/QR Code)
+# ---------------------------------------------------------
+class CreateSessionRequest(BaseModel):
+    company_id: str
+    machine_id: str  # Forces the UI to specify a machine
+    user_id: str = "anonymous"
+
+@router.post("/sessions")
+async def create_chat_session(req: CreateSessionRequest):
+    """Creates a new chat session locked to a specific machine."""
+    session_id = f"sess_{uuid.uuid4().hex[:8]}"
+    
+    async with AsyncSessionLocal() as session:
+        new_session = ChatSession(
+            id=session_id,
+            company_id=req.company_id,
+            user_id=req.user_id,
+            machine_id=req.machine_id
+        )
+        session.add(new_session)
+        await session.commit()
+        
+    return {
+        "session_id": session_id,
+        "machine_id": req.machine_id,
+        "status": "created"
+    }
+
+
+# ---------------------------------------------------------
+# EXISTING: The Streaming Endpoint
+# ---------------------------------------------------------
 class ChatStreamRequest(BaseModel):
     session_id: str
     company_id: str
@@ -18,8 +58,21 @@ class ChatStreamRequest(BaseModel):
 @router.post("/stream")
 async def chat_stream(req: ChatStreamRequest, request: Request):
     
+    # 1. VERIFY SESSION AND FETCH MACHINE ID
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(ChatSession).where(ChatSession.id == req.session_id)
+        )
+        chat_session = result.scalar_one_or_none()
+        
+        if not chat_session:
+            raise HTTPException(status_code=404, detail="Chat session not found or expired.")
+        
+        # We now know exactly which machine this user is talking about!
+        active_machine_id = chat_session.machine_id
+
     async def event_generator():
-        # 1. Save User Message to PostgreSQL
+        # 2. Save User Message to PostgreSQL
         async with db.tenant_connection(req.company_id) as conn:
             await conn.execute(
                 """
@@ -29,27 +82,29 @@ async def chat_stream(req: ChatStreamRequest, request: Request):
                 req.session_id, req.message
             )
 
-        # 2. Instantiate and run the Cognitive Loop
+        # 3. Instantiate and run the Cognitive Loop
         executor = CognitiveLoopExecutor(
             session_id=req.session_id, 
             company_id=req.company_id, 
             user_id=req.user_id
         )
         
+        # Inject the machine_id directly into the executor so RAG can use it
+        executor.active_machine_id = active_machine_id 
+        
         final_response_buffer = ""
 
-        # 3. Stream the executor's output directly to React
+        # 4. Stream the executor's output directly to React
         async for event in executor.execute(req.message):
             if await request.is_disconnected():
                 break
                 
-            # If it's a message token, save it to our buffer for the database
             if event["type"] == "message":
                 final_response_buffer += event["payload"]
                 
             yield {"data": json.dumps(event)}
 
-        # 4. Save Final AI Message to PostgreSQL
+        # 5. Save Final AI Message to PostgreSQL
         if final_response_buffer and not await request.is_disconnected():
             async with db.tenant_connection(req.company_id) as conn:
                 await conn.execute(

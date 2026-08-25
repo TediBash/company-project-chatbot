@@ -1,5 +1,6 @@
 // src/pages/Chat.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom'; // NEW: Added for deep linking
 import apiClient from '../api/client';
 import { jwtDecode } from 'jwt-decode';
 import { BaseModal } from '../components/ui/BaseModal';
@@ -8,6 +9,7 @@ export const ChatPage = () => {
   // 1. Role & Permissions Extraction
   let isAdmin = false;
   let currentUserId = null;
+  let currentCompanyId = 'arol_corp'; // Fallback company ID
   const token = localStorage.getItem('arol_token');
   
   if (token) {
@@ -15,14 +17,23 @@ export const ChatPage = () => {
       const decoded = jwtDecode(token);
       isAdmin = decoded.user?.visibility === 'full';
       currentUserId = decoded.user?.id;
+      currentCompanyId = decoded.user?.company_id || 'arol_corp';
     } catch (e) {}
   }
+
+  // Router hooks for QR code deep-linking
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // 2. Application State
   const [sessions, setSessions] = useState([]);
   const [activeSession, setActiveSession] = useState(null);
   const [messages, setMessages] = useState([]);
   const [roadmap, setRoadmap] = useState({ steps: [] });
+  
+  // NEW: Machine Selection State
+  const [availableMachines, setAvailableMachines] = useState([]);
+  const [selectedMachine, setSelectedMachine] = useState('');
   
   // 3. Admin Toggle & Search State
   const [viewAll, setViewAll] = useState(false);
@@ -39,7 +50,7 @@ export const ChatPage = () => {
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // 5. Modal States (NEW)
+  // 5. Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newChatTitle, setNewChatTitle] = useState('');
   
@@ -58,6 +69,25 @@ export const ChatPage = () => {
   };
 
   useEffect(() => { if (agentStatus) scrollToBottom(); }, [agentStatus]);
+
+  // NEW: Fetch Available Machines & Handle QR Code Deep Linking
+  useEffect(() => {
+    // 1. Mock fetch available machines (Replace with your actual API route later)
+    setAvailableMachines([
+      { id: '15610', name: 'TS - EURO PK TWIN CHUTE D' },
+      { id: 'M-100', name: 'Capping Head Standard' },
+      { id: 'M-200', name: 'Rotary Filler Pro' }
+    ]);
+
+    // 2. Check if user arrived via QR Code URL (e.g., /chat?machineId=15610)
+    const urlMachineId = searchParams.get('machineId');
+    if (urlMachineId) {
+      setSelectedMachine(urlMachineId);
+      setIsCreateModalOpen(true);
+      // Clean up the URL so it doesn't trigger again on refresh
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   // Fetch Session History Sidebar
   const fetchSessions = useCallback(async () => {
@@ -85,16 +115,14 @@ export const ChatPage = () => {
       setHasMore(response.data.hasMore);
       setRoadmap(response.data.roadmap);
       
-      // Auto-scroll to the newest message on initial load
       setTimeout(() => scrollToBottom(), 150);
     } catch (err) {
       console.error('Failed to load chat history', err);
     }
   };
 
-  // Scroll Event Listener
+  // Scroll Event Listener (Pagination)
   const handleScroll = async (e) => {
-    // If we hit the absolute top of the container, have more to load, and aren't already loading
     if (e.target.scrollTop === 0 && hasMore && !isLoadingMore) {
       const oldestMessage = messages[0];
       if (!oldestMessage || !oldestMessage.created_at) return;
@@ -108,11 +136,9 @@ export const ChatPage = () => {
           params: { before: oldestMessage.created_at, limit: 5 }
         });
 
-        // Prepend the older messages to the array
         setMessages(prev => [...res.data.messages, ...prev]);
         setHasMore(res.data.hasMore);
 
-        // Instantly restore scroll position so the user's view doesn't jump
         setTimeout(() => {
           if (chatContainerRef.current) {
             const newScrollHeight = chatContainerRef.current.scrollHeight;
@@ -127,17 +153,32 @@ export const ChatPage = () => {
     }
   };
 
-  // Create New Session via Modal
+  // UPDATED: Create New Session locked to Machine
   const handleCreateSession = async (e) => {
     e.preventDefault();
+    if (!selectedMachine) {
+      alert("Please select a machine to begin.");
+      return;
+    }
+    
     try {
-      const res = await apiClient.post('/chat/sessions', { title: newChatTitle });
+      // Send the machine_id and company_id to the new backend endpoint
+      const res = await apiClient.post('/chat/sessions', { 
+        title: newChatTitle || `Diagnostic Session: ${selectedMachine}`,
+        machine_id: selectedMachine,
+        company_id: currentCompanyId
+      });
+      
       setActiveSession(res.data);
       setMessages([]);
       setRoadmap({ steps: [] });
       setIsCreateModalOpen(false);
       setNewChatTitle('');
+      setSelectedMachine('');
       fetchSessions();
+      
+      // Navigate to the clean session URL if needed
+      // navigate(`/chat/${res.data.session_id}`);
     } catch (err) {
       console.error('Failed to create chat', err);
       alert('Failed to create chat session.');
@@ -165,7 +206,6 @@ export const ChatPage = () => {
       const id = sessionToDelete.id || sessionToDelete.session_id;
       await apiClient.delete(`/chat/sessions/${id}`);
       
-      // If we are currently looking at the chat we just deleted, clear the screen
       if (activeSession && (activeSession.id === id || activeSession.session_id === id)) {
         setActiveSession(null);
         setMessages([]);
@@ -180,9 +220,8 @@ export const ChatPage = () => {
     }
   };
 
-  // SSE Stream Handler: Sends message and listens to Agent thought process
+  // SSE Stream Handler
   const sendMessageStream = async (sessionId, messageContent) => {
-    // Optimistic UI Update
     setMessages(prev => [...prev, { role: 'user', content: messageContent }]);
     setTimeout(scrollToBottom, 50);
     setInput('');
@@ -190,39 +229,30 @@ export const ChatPage = () => {
     setAgentStatus('Connecting to AI Assistant...');
 
     try {
-      // 1. Ask Axios to generate the exact URL
       const streamUrl = apiClient.getUri({ url: `/chat/sessions/${sessionId}/stream` });
 
-      // 2. Use native fetch to handle the streaming response
       const response = await fetch(streamUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ content: messageContent })
+        body: JSON.stringify({ 
+          content: messageContent 
+        })
       });
 
-      if (!response.ok) {
-        throw new Error(`Backend rejected request with status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Backend rejected request with status: ${response.status}`);
+      if (!response.body) throw new Error("ReadableStream not supported or no body returned.");
 
-      if (!response.body) {
-         throw new Error("ReadableStream not supported or no body returned.");
-      }
-
-      // Initialize the reader EXACTLY ONCE
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let buffer = ''; 
 
-      // Single loop to read the stream
-      // Read the stream chunk by chunk
       while (true) {
         const { done, value } = await reader.read();
         
         if (done) {
-          // If the stream closes but there is still data in the buffer, process it!
           if (buffer.trim().startsWith('data:')) {
              try {
                 const finalData = JSON.parse(buffer.trim().replace(/^data:\s*/, ''));
@@ -243,13 +273,8 @@ export const ChatPage = () => {
           break;
         }
 
-        // Append the new network chunk to the buffer
         buffer += decoder.decode(value, { stream: true });
-
-        // 🚨 THE FIX: Split safely handling both \n\n and \r\n\r\n
         const parts = buffer.split(/\r?\n\r?\n/);
-        
-        // The last part might be an incomplete network chunk. 
         buffer = parts.pop();
 
         for (const part of parts) {
@@ -257,7 +282,6 @@ export const ChatPage = () => {
           
           if (trimmedPart.startsWith('data:')) {
             try {
-              // Strip the "data: " prefix safely
               const jsonStr = trimmedPart.replace(/^data:\s*/, '');
               const data = JSON.parse(jsonStr);
               
@@ -320,7 +344,6 @@ export const ChatPage = () => {
         approved
       });
       
-      // Append the system/assistant acknowledgment to the chat
       setMessages(prev => [...prev, { role: 'assistant', content: res.data.message }]);
     } catch (err) {
       console.error('Action failed', err);
@@ -330,13 +353,10 @@ export const ChatPage = () => {
     }
   };
 
-  // Render a Message Bubble
   const renderMessage = (msg, index) => {
-    if (msg.role === 'system' || msg.role === 'tool') return null; // Hide system internals
+    if (msg.role === 'system' || msg.role === 'tool') return null;
 
     const isUser = msg.role === 'user';
-    
-    // Parse HITL Action Requests
     let actionPayload = null;
     let textContent = msg.content;
     try {
@@ -345,14 +365,13 @@ export const ChatPage = () => {
         actionPayload = parsed;
         textContent = "The agent is requesting permission to execute an action on your behalf.";
       }
-    } catch (e) {} // Not JSON, treat as standard text
+    } catch (e) {} 
 
     return (
       <div key={index} className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
         <div className={`max-w-[75%] rounded-2xl p-4 shadow-sm ${isUser ? 'bg-[var(--color-tenant-primary)] text-white rounded-br-none' : 'bg-white border border-gray-100 text-gray-800 rounded-bl-none'}`}>
           <div className="text-sm leading-relaxed whitespace-pre-wrap">{textContent}</div>
           
-          {/* Render Human-in-the-Loop Action Card */}
           {actionPayload && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-gray-900">
               <p className="text-[10px] uppercase font-bold text-gray-500 mb-2 tracking-widest">Pending Action</p>
@@ -386,7 +405,7 @@ export const ChatPage = () => {
   return (
     <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden animate-in fade-in duration-500">
       
-      {/* LEFT SIDEBAR: Session History */}
+      {/* LEFT SIDEBAR */}
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col min-h-0">
         <div className="p-4 border-b border-gray-100 shrink-0">
           <button 
@@ -396,7 +415,6 @@ export const ChatPage = () => {
             + New Chat
           </button>
           
-          {/* THE ADMIN TOGGLE SWITCH */}
           {isAdmin && (
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
               <span className="text-xs font-bold text-gray-600 uppercase tracking-widest">View Team Chats</span>
@@ -418,7 +436,6 @@ export const ChatPage = () => {
           />
         </div>
         
-        {/* Added min-h-0 and block formatting context to guarantee scrolling */}
         <div className="flex-1 overflow-y-auto min-h-0 p-2">
           {sessions.map(session => (
             <div 
@@ -429,17 +446,16 @@ export const ChatPage = () => {
               <div className="flex-1 pr-6">
                 <h4 className="text-sm font-semibold text-gray-800 line-clamp-1 mb-1">{session.title}</h4>
                 <div className="flex justify-between items-center text-[10px] text-gray-400">
-                  <span>{new Date(session.updatedAt).toLocaleDateString()}</span>
+                  <span>{new Date(session.updatedAt || Date.now()).toLocaleDateString()}</span>
                   {viewAll && session.userId !== currentUserId && (
                     <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-bold">{session.userName}</span>
                   )}
                 </div>
               </div>
               
-              {/* Inline Delete Button (Shows on Hover) */}
               <button 
                 onClick={(e) => { 
-                  e.stopPropagation(); // Prevents loadConversation from firing
+                  e.stopPropagation(); 
                   setSessionToDelete(session); 
                   setIsDeleteModalOpen(true); 
                 }}
@@ -459,15 +475,29 @@ export const ChatPage = () => {
       <div className="flex-1 flex flex-col relative">
         {/* Chat Header */}
         <div className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
-          <h2 className="text-lg font-light text-gray-900">
-            {activeSession ? activeSession.title : 'Select or create a chat to begin'}
-          </h2>
+          <div className="flex flex-col justify-center">
+            <h2 className="text-lg font-light text-gray-900 leading-tight">
+              {activeSession ? activeSession.title : 'Select or create a chat to begin'}
+            </h2>
+            
+            {/* UPDATED: Dynamically look up the machine name from availableMachines state */}
+            {activeSession?.machine_id && (
+              <p className="text-[10px] font-bold text-[var(--color-tenant-primary)] uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                </svg>
+                {/* Look up the name, fallback to ID if not found */}
+                {availableMachines.find(m => m.id === activeSession.machine_id)?.name || 'Unknown Machine'} 
+                <span className="text-gray-400 font-medium ml-1">(SN: {activeSession.machine_id})</span>
+              </p>
+            )}
+          </div>
           
           {activeSession && (
             <div className="flex gap-3">
               <button 
                 onClick={() => { setEditChatTitle(activeSession.title); setIsEditModalOpen(true); }}
-                className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors"
+                className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-[var(--color-tenant-primary)] transition-colors"
               >
                 Edit Title
               </button>
@@ -481,7 +511,6 @@ export const ChatPage = () => {
           )}
         </div>
 
-        {/* Message Area */}
         <div 
           ref={chatContainerRef}
           onScroll={handleScroll}
@@ -498,13 +527,12 @@ export const ChatPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
               <h3 className="text-xl font-light text-gray-900 mb-2">AROL Support Intelligence</h3>
-              <p className="text-sm text-gray-500">I am connected directly to your fleet's telemetry and technical manuals. Describe the issue you are facing, or ask me for operational insights.</p>
+              <p className="text-sm text-gray-500">I am connected directly to your fleet's telemetry and technical manuals. Select a machine and describe the issue you are facing.</p>
             </div>
           ) : (
             messages.map((msg, idx) => renderMessage(msg, idx))
           )}
           
-          {/* Agent Status Indicator (SSE Pipeline) */}
           {agentStatus && (
             <div className="flex w-full mb-6 justify-start">
               <div className="bg-gray-100 border border-gray-200 text-gray-500 text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2 shadow-sm">
@@ -519,7 +547,6 @@ export const ChatPage = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Form */}
         <div className="p-4 bg-white border-t border-gray-200">
           <form onSubmit={handleFormSubmit} className="relative max-w-4xl mx-auto flex items-end gap-3">
             <textarea
@@ -545,16 +572,13 @@ export const ChatPage = () => {
         </div>
       </div>
 
-      {/* RIGHT SIDEBAR: Dynamic Roadmap (Collapsible) */}
+      {/* RIGHT SIDEBAR: Roadmap (Unchanged) */}
       <div className={`bg-white border-l border-gray-200 hidden lg:flex flex-col shadow-[-4px_0_15px_-5px_rgba(0,0,0,0.05)] z-10 transition-all duration-300 ${isRoadmapOpen ? 'w-72' : 'w-14 items-center'}`}>
-        
-        {/* Sidebar Header & Toggle */}
         <div className={`p-4 border-b border-gray-100 bg-gray-50/50 flex ${isRoadmapOpen ? 'justify-between' : 'justify-center'} items-center shrink-0`}>
           {isRoadmapOpen && <h3 className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-500 truncate mr-2">Live Roadmap</h3>}
           <button 
             onClick={() => setIsRoadmapOpen(!isRoadmapOpen)}
             className="text-gray-400 hover:text-[var(--color-tenant-primary)] transition-colors p-1 rounded hover:bg-gray-200"
-            title={isRoadmapOpen ? "Collapse Roadmap" : "Expand Roadmap"}
           >
             <svg className={`w-5 h-5 transform transition-transform duration-300 ${isRoadmapOpen ? 'rotate-0' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
@@ -562,7 +586,6 @@ export const ChatPage = () => {
           </button>
         </div>
 
-        {/* Sidebar Content */}
         {isRoadmapOpen ? (
           <div className="flex-1 overflow-y-auto min-h-0 p-4">
             {!roadmap || !roadmap.steps || roadmap.steps.length === 0 ? (
@@ -600,7 +623,6 @@ export const ChatPage = () => {
             )}
           </div>
         ) : (
-          /* Collapsed View Icon Placeholder */
           <div className="flex-1 flex flex-col pt-6 items-center border-t border-gray-50">
             <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -611,9 +633,25 @@ export const ChatPage = () => {
 
       {/* --- MODALS --- */}
       
-      {/* 1. Create Modal */}
+      {/* 1. UPDATED Create Modal: Now requires Machine Selection */}
       <BaseModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Start New Conversation">
-        <form onSubmit={handleCreateSession} className="space-y-6">
+        <form onSubmit={handleCreateSession} className="space-y-5">
+          
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Select Machinery *</label>
+            <select
+              required
+              value={selectedMachine}
+              onChange={(e) => setSelectedMachine(e.target.value)}
+              className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)] focus:ring-1 focus:ring-[var(--color-tenant-primary)] bg-white"
+            >
+              <option value="" disabled>-- Select a Target Machine --</option>
+              {availableMachines.map(m => (
+                <option key={m.id} value={m.id}>{m.name} (SN: {m.id})</option>
+              ))}
+            </select>
+          </div>
+
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Conversation Title (Optional)</label>
             <input 
@@ -621,13 +659,13 @@ export const ChatPage = () => {
               placeholder="e.g. Conveyor Belt Maintenance"
               value={newChatTitle}
               onChange={(e) => setNewChatTitle(e.target.value)}
-              className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]"
+              className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)] focus:ring-1 focus:ring-[var(--color-tenant-primary)]"
             />
-            <p className="text-xs text-gray-400 mt-1">Leave blank to let the system generate a default title.</p>
           </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
-            <button type="submit" className="px-5 py-2 text-xs font-bold tracking-wider text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase">Start Chat</button>
+          
+          <div className="flex justify-end gap-3 pt-3">
+            <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase hover:bg-gray-50 rounded-md transition-colors">Cancel</button>
+            <button type="submit" disabled={!selectedMachine} className="px-5 py-2 text-xs font-bold tracking-wider text-white bg-[var(--color-tenant-primary)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-md uppercase transition-opacity">Start Chat</button>
           </div>
         </form>
       </BaseModal>
@@ -647,7 +685,7 @@ export const ChatPage = () => {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
-            <button type="submit" className="px-5 py-2 text-xs font-bold tracking-wider text-white bg-blue-600 hover:bg-blue-700 rounded-md uppercase">Save Title</button>
+            <button type="submit" className="px-5 py-2 text-xs font-bold tracking-wider text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase">Save Title</button>
           </div>
         </form>
       </BaseModal>
@@ -665,7 +703,6 @@ export const ChatPage = () => {
         </div>
       </BaseModal>
     </div>
-
   );
 };
 

@@ -1,4 +1,5 @@
 # app/pipeline/tracer.py
+import json
 import time
 from typing import Dict, Any, List, Optional
 import litellm
@@ -99,18 +100,21 @@ class AITrajectoryTracer:
         """
         total_latency = round(time.time() - self.start_time, 3)
         
+        safe_steps = json.loads(json.dumps(self.steps, default=str))
+        
         trace = AITelemetryTrace(
-            session_id=self.session_id,
-            company_id=self.company_id,
-            user_id=self.user_id,
-            question=self.question,
-            final_answer=final_answer,
-            target_agent=self.target_agent,
-            trajectory_steps=self.steps,
-            total_tokens_in=self.total_tokens_in,
-            total_tokens_out=self.total_tokens_out,
-            total_cost_usd=self.total_cost_usd,
-            total_latency_sec=total_latency
+            session_id=str(self.session_id),
+            company_id=str(self.company_id),
+            user_id=str(self.user_id) if self.user_id else "unknown",
+            machine_id=str(getattr(self, "machine_id", "unknown")),
+            question=str(self.question),
+            final_answer=str(final_answer),
+            target_agent=str(self.target_agent),
+            trajectory_steps=safe_steps,
+            total_tokens_in=float(self.total_tokens_in or 0.0),
+            total_tokens_out=float(self.total_tokens_out or 0.0),
+            total_cost_usd=float(self.total_cost_usd or 0.0),
+            total_latency_sec=float(total_latency)
         )
 
         try:
