@@ -228,3 +228,113 @@ export const deleteRequest = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete request.' });
   }
 };
+
+export const getSparePartsCatalog = async (req, res) => {
+  try {
+    const sql = `
+      SELECT DISTINCT 
+        item_description AS "partNumber",
+        item_description AS "name",
+        item_description AS "description",
+        price,
+        0 AS "leadTimeDays"
+      FROM app_commercial.quote_lines
+      LIMIT 50;
+    `;
+    const { rows } = await query(sql);
+    res.json(rows);
+  } catch (error) {
+    console.error('[Spare Parts GET Error]', error);
+    res.status(500).json({ message: 'Failed to fetch spare parts catalog.' });
+  }
+};
+
+export const getOrderHistory = async (req, res) => {
+  const tenantCompanyId = req.tenant.companyId;
+  const company = req.query.company || tenantCompanyId; // Fallback if empty
+  const isPlatformOwner = req.tenant.isPlatformOwner;
+
+  if (!isPlatformOwner && tenantCompanyId !== company) {
+    return res.status(403).json({ message: 'Forbidden access to this company data.' });
+  }
+
+  try {
+    const sql = `
+      SELECT 
+        o.order_id AS "orderId",
+        o.order_status AS "orderStatus",
+        o.shipment_status AS "shipmentStatus",
+        o.created_at AS "orderDate",
+        COUNT(ol.line_id) AS "totalLines"
+      FROM app_commercial.orders o
+      LEFT JOIN app_commercial.order_lines ol ON o.order_id = ol.order_id
+      WHERE o.company_id = $1
+      GROUP BY o.order_id
+      ORDER BY o.created_at DESC
+      LIMIT 10;
+    `;
+    const { rows } = await query(sql, [company]);
+    res.json(rows);
+  } catch (error) {
+    console.error('[Order History GET Error]', error);
+    res.status(500).json({ message: 'Failed to fetch order history.' });
+  }
+};
+
+export const getMachinePurchaseDetails = async (req, res) => {
+  const { machineId } = req.params;
+  const companyId = req.tenant.companyId;
+
+  try {
+    const sql = `
+      SELECT 
+        m.delivery_date AS "deliveryDate",
+        ql.item_description AS "itemDescription",
+        ql.price,
+        qr.discount_rate AS "discountRate",
+        o.order_status AS "orderStatus",
+        o.created_at AS "orderDate"
+      FROM app_tenant.machines m
+      JOIN app_commercial.quote_lines ql ON m.machine_id = ql.machine_id
+      JOIN app_commercial.quote_revisions qr ON ql.quote_revision_id = qr.revision_id
+      JOIN app_commercial.orders o ON o.quote_revision_id = qr.revision_id
+      WHERE m.machine_id = $1 AND m.company_id = $2 AND o.company_id = $2
+      ORDER BY o.created_at DESC
+      LIMIT 1;
+    `;
+    const { rows } = await query(sql, [machineId, companyId]);
+    res.json(rows);
+  } catch (error) {
+    console.error('[Purchase Details Error]', error);
+    res.status(500).json({ message: 'Failed to fetch purchase details.' });
+  }
+};
+
+export const getMachineQuotations = async (req, res) => {
+  const { machineId } = req.params;
+  const companyId = req.tenant.companyId;
+
+  try {
+    const sql = `
+      SELECT 
+        q.quote_id AS "quoteId",
+        qr.revision_number AS "revisionNumber",
+        qr.discount_rate AS "discountRate",
+        qr.revision_status AS "revisionStatus",
+        qr.created_at AS "revisionDate",
+        ql.item_description AS "itemDescription",
+        ql.price
+      FROM app_commercial.quotes q
+      JOIN app_commercial.quote_revisions qr ON q.quote_id = qr.quote_id
+      JOIN app_commercial.quote_lines ql ON qr.revision_id = ql.quote_revision_id
+      WHERE q.company_id = $1 AND ql.machine_id = $2
+      ORDER BY qr.revision_number DESC
+      LIMIT 5;
+    `;
+    const { rows } = await query(sql, [companyId, machineId]);
+    res.json(rows);
+  } catch (error) {
+    console.error('[Quotations Error]', error);
+    res.status(500).json({ message: 'Failed to fetch quotations.' });
+  }
+};

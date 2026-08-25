@@ -349,23 +349,76 @@ export const ChatPage = () => {
     sendMessageStream(activeSession.session_id || activeSession.id, input);
   };
 
-  const handleHumanInTheLoop = async (actionData, approved) => {
+  const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
     try {
       setAgentStatus(approved ? 'Executing action...' : 'Cancelling action...');
       setIsProcessing(true);
       
-      const res = await apiClient.post(`/chat/sessions/${activeSession.session_id || activeSession.id}/action`, {
-        action: actionData.action,
-        details: actionData.details,
-        approved
+      const sessionId = activeSession.session_id || activeSession.id;
+
+      // 1. Force unwrapping of the data
+      let data = actionData;
+      if (Array.isArray(data)) data = data[0];
+      if (typeof data === 'string') {
+        try { data = JSON.parse(data); } catch(e) {}
+      }
+
+      // 2. Extract action type and details
+      const actionType = data?.action || data?.action_type || "create_commercial_request";
+      let actionDetails = data?.details || data?.payload || {};
+      
+      if (!actionDetails.type && data?.type) {
+        actionDetails = { title: data.title, type: data.type, urgency: data.urgency };
+      }
+
+      // 3. Build the exact JSON body
+      const requestBody = {
+        action: actionType,
+        payload: actionDetails,
+        machine_id: activeSession?.machine_id || '', 
+        company_id: activeSession?.company_id || '', 
+        approved: approved
+      };
+
+      console.log("[DEBUG] Sending via Fetch:", requestBody);
+
+      // 4. BYPASS AXIOS INTERCEPTORS: Use native fetch!
+      const actionUrl = apiClient.getUri({ url: `/chat/sessions/${sessionId}/action` });
+      
+      const response = await fetch(actionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // token is extracted at the top of Chat.jsx
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Server returned ${response.status}: ${errorText}`);
+      }
+
+      const resData = await response.json();
+      
+      // 5. Update UI to hide the buttons
+      setMessages(prev => {
+        const newMessages = [...prev];
+        if (messageIndex !== undefined && newMessages[messageIndex]) {
+          const updatedActionContent = { ...data, isResolved: true, approved: approved };
+          newMessages[messageIndex] = { ...newMessages[messageIndex], content: JSON.stringify(updatedActionContent) };
+        }
+        newMessages.push({ role: 'assistant', content: resData.message || "Action processed." });
+        return newMessages;
       });
       
-      setMessages(prev => [...prev, { role: 'assistant', content: res.data.message }]);
     } catch (err) {
       console.error('Action failed', err);
+      alert(`Action failed: ${err.message}`);
     } finally {
       setIsProcessing(false);
       setAgentStatus('');
+      setTimeout(scrollToBottom, 50);
     }
   };
 

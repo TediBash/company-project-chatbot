@@ -15,10 +15,26 @@ from app.tools.operational import (
     query_maintenance_tickets
 )
 
+from app.tools.commercial import (
+    get_spare_parts_catalog,
+    get_order_history,
+    get_purchase_details,
+    get_quotation_history
+)
+
+from app.tools.commercial import get_spare_parts_catalog, get_order_history
+
 class CommercialDecision(BaseModel):
-    needs_quote: bool = Field(description="True ONLY if the user explicitly wants to buy, order, or get a quote.")
-    part_name: str = Field(default="General Spare Part", description="The specific part to buy.")
-    reasoning: str = Field(description="A brief explanation of why a quote is or is not needed.")
+    needs_quote: bool = Field(
+        description="Set to True ONLY if the user explicitly asks to CREATE a new order, BUY a new part, or REQUEST a new quote. Set to False if they are just asking to view past quotes, revisions, or history."
+    )
+    part_name: str = Field(
+        default="General Spare Part", 
+        description="The specific part to buy (if applicable)."
+    )
+    reasoning: str = Field(
+        description="A brief explanation of why a quote is or is not needed based on the strict rules."
+    )
 
 class BaseAgent:
     def __init__(self):
@@ -103,14 +119,53 @@ class OperationalAgent(BaseAgent):
 
 class CommercialAgent(BaseAgent):
     async def draft_response(self, query: str, context: Dict[str, Any], tracer: Any = None) -> Tuple[Union[AsyncGenerator[str, None], Dict[str, Any]], List[Dict[str, Any]]]:
-        variables = {"user_query": query}
+        # 1. Extract session credentials
+        auth_token = context.get("auth_token", "")
+        company_id = context.get("company_id", "")
+        active_machine_id = context.get("active_machine_id", "")
+        active_machine_name = context.get("active_machine_name", "Unknown Model")
+        
+        # 2. Fetch All Commercial Data Concurrently!
+        parts_data, orders_data, purchase_data, quote_data = await asyncio.gather(
+            get_spare_parts_catalog(active_machine_name, auth_token),
+            get_order_history(company_id, auth_token),
+            get_purchase_details(active_machine_id, auth_token),
+            get_quotation_history(active_machine_id, auth_token)
+        )
+        
+        if tracer:
+            tracer.add_step(
+                step_name="Commercial API Tools Execution",
+                action_type="tool_call",
+                details={
+                    "endpoints_called": ["spare_parts", "orders", "purchase_details", "quotations"],
+                    "responses": {
+                        "parts_catalog": parts_data,
+                        "order_history": orders_data,
+                        "purchase_details": purchase_data,
+                        "quotation_history": quote_data
+                    }
+                }
+            )
+
+        # 3. Inject context into the prompt
+        variables = {
+            "user_query": query,
+            "parts_catalog": parts_data,
+            "order_history": orders_data,
+            "purchase_details": purchase_data,
+            "quotation_history": quote_data
+        }
         prompt = prompt_registry.render("commercial", variables)
         
         messages = [
-            {"role": "system", "content": prompt.system_message},
-            {"role": "user", "content": prompt.user_message}
+            {"role": "system", "content": prompt.system_message}
         ]
+        if "messages" in context:
+            messages.extend(context["messages"])
+        messages.append({"role": "user", "content": prompt.user_message})
         
+        # 4. Structured Output for HITL Routing
         decision: CommercialDecision = await self.llm.generate_structured(
             model_name=self.worker_model, 
             messages=messages, 
@@ -121,6 +176,7 @@ class CommercialAgent(BaseAgent):
         if tracer and decision:
             tracer.add_llm_step("Commercial HITL Decision", self.worker_model, messages, decision.model_dump_json(), decision.model_dump())
 
+        # 5. Route to HITL or Stream standard response
         if decision and decision.needs_quote:
             tool_dict = ToolRegistry.create_commercial_request(
                 title=f"Spare Part Order: {decision.part_name}",
@@ -131,8 +187,7 @@ class CommercialAgent(BaseAgent):
                 tracer.add_step("HITL Tool Triggered", "tool_call", tool_dict)
             return tool_dict, messages
             
-        fallback_msg = [{"role": "system", "content": "You are a commercial agent. Answer generally."}, {"role": "user", "content": query}]
-        return self.llm.stream_response(model_name=self.worker_model, messages=fallback_msg), fallback_msg
+        return self.llm.stream_response(model_name=self.worker_model, messages=messages), messages
 
 class GeneralAgent(BaseAgent):
     async def draft_response(self, query: str, context: Dict[str, Any], tracer: Any = None) -> Tuple[Union[AsyncGenerator[str, None], Dict[str, Any]], List[Dict[str, Any]]]:

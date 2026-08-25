@@ -1,6 +1,8 @@
 # app/api/routes/chat.py
 import json
 import uuid
+import os
+import httpx
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
@@ -129,3 +131,74 @@ async def chat_stream(req: ChatStreamRequest, request: Request):
                 )
 
     return EventSourceResponse(event_generator())
+
+NODE_API_BASE = os.getenv("NODE_API_BASE", "http://localhost:5000/api")
+
+@router.post("/action")
+@router.post("/sessions/{session_id}/action")
+async def execute_action(request: Request, session_id: str = None):
+    # 1. Parse raw JSON
+    try:
+        req_data = await request.json()
+        print(f"[DEBUG] Full Incoming Data: {req_data}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    # 2. Extract Token
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    token = auth_header.split(" ")[1]
+
+    # 3. SECURELY FETCH MACHINE ID FROM DATABASE
+    if not session_id:
+        session_id = req_data.get("session_id")
+
+
+    # ---> NEW: Fallback safely to request body if DB lookup fails! <---
+    machine_id =  req_data.get("machine_id") or req_data.get("machineId") or ""
+    company_id =  req_data.get("company_id") or req_data.get("companyId") or ""
+
+    # 4. Extract Payload Safely
+    action_type = req_data.get("action_type") or req_data.get("action", "")
+    is_approved = req_data.get("approved", True)
+    
+    if not is_approved or action_type in ["reject", "cancel", "reject_commercial_request"]:
+        return {"status": "success", "message": "Action cancelled by user."}
+
+    # 5. Route the Action
+    if action_type in ["create_commercial_request", "commercial_request"]:
+        async with httpx.AsyncClient() as client:
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            raw_type = req_data.get("type", "spare_parts")
+            
+            raw_urgency = str(req_data.get("urgency", "medium")).lower()
+            
+            extracted_title = req_data.get("title", f"Spare Part Request for {machine_id}")
+                
+            type_mapper = {"spare_parts": "Spare Parts", "technical_support": "Technical Support"}
+            urgency_mapper = {"low": "Low", "medium": "Standard", "high": "Urgent", "critical": "Critical"}
+                
+            db_type = type_mapper.get(raw_type, "Spare Parts") 
+            db_urgency = urgency_mapper.get(raw_urgency, "Standard")
+            
+            body = {
+                "title": extracted_title,
+                "description": req_data.get("description", "Automated request generated via AI Assistant."),
+                "type": db_type,
+                "urgency": db_urgency,
+                "machineId": str(machine_id) if machine_id else "",
+                "companyId": str(company_id) if company_id else ""
+            }
+            
+            print(f"[DEBUG] Sending to Node: {body}")
+            
+            response = await client.post(f"{NODE_API_BASE}/commercial", json=body, headers=headers)
+            
+            if response.status_code == 201:
+                return {"status": "success", "message": "Ticket created successfully.", "data": response.json()}
+            else:
+                raise HTTPException(status_code=response.status_code, detail=f"Node.js rejected the request: {response.text}")
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown action type: {action_type}")

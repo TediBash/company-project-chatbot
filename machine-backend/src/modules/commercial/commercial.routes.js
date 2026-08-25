@@ -5,9 +5,13 @@ import {
   getCommercialOptions, 
   createRequest, 
   updateRequest, 
-  deleteRequest 
+  deleteRequest,
+  getMachinePurchaseDetails,
+  getMachineQuotations,
+  getSparePartsCatalog,
+  getOrderHistory
 } from './commercial.controller.js';
-import { requireAuth } from '../../middleware/authMiddleware.js';
+import { requireAuth, requireRole } from '../../middleware/authMiddleware.js';
 
 const router = Router();
 
@@ -19,5 +23,10 @@ router.get('/options', getCommercialOptions); // MUST be above /:id
 router.post('/', createRequest);
 router.put('/:id', updateRequest);
 router.delete('/:id', deleteRequest);
+
+router.get('/parts', requireRole(['full', 'commercial']), getSparePartsCatalog);
+router.get('/orders', requireRole(['full', 'commercial']), getOrderHistory);
+router.get('/machines/:machineId/purchase-details', requireRole(['full', 'commercial']), getMachinePurchaseDetails);
+router.get('/machines/:machineId/quotations', requireRole(['full', 'commercial']), getMachineQuotations);
 
 export default router;
