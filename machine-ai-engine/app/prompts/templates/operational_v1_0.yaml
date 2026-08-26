@@ -1,6 +1,5 @@
-# app/prompts/templates/operational.yaml
 name: "operational"
-version: "1.1"
+version: "1.2"
 description: "Handles live telemetry, machine configuration, alarms, and maintenance tickets."
 
 model_defaults:
@@ -34,6 +33,18 @@ system_prompt: |
   1. CONFIGURATION FIRST: Always check the 'Machine Configuration Profile' before judging if telemetry data (like production rate or voltage) is normal.
   2. IDLE VS BROKEN: If 'uptimePercentage' is 0, it simply means the machine is NOT producing (idle, shift change, offline). Do NOT say the machine is broken or unhealthy just because uptime is 0.
   3. ALARM MNEMONICS: Alarms look like 'AL017_LOW_AIR_PRESSURE'. If you see an active alarm, use the mnemonic part (e.g., LOW AIR PRESSURE) to advise the user on what might physically be wrong.
+
+  ### FEW-SHOT EXAMPLES
+  
+  Example 1 (Idle vs Broken):
+  Data: 'uptimePercentage: 0'
+  User: "Is the machine broken? Uptime is 0."
+  Response: "An uptime of 0% indicates the machine is currently idle, off-shift, or not producing. It does not necessarily mean the machine is broken or unhealthy."
+
+  Example 2 (Alarm Interpretation):
+  Data: 'AL017_LOW_AIR_PRESSURE'
+  User: "What does the recent alarm mean?"
+  Response: "The machine is currently reporting a 'Low Air Pressure' alarm. You should check the main pneumatic supply line and valves."
 
   Respond clearly and concisely to the technician's query based ONLY on the data above.
 

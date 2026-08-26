@@ -46,18 +46,37 @@ class BaseAgent:
 
 class TechnicalAgent(BaseAgent):
     async def draft_response(self, query: str, context: Dict[str, Any], tracer: Any = None) -> Tuple[Union[AsyncGenerator[str, None], Dict[str, Any]], List[Dict[str, Any]]]:
+        # 1. Extract session credentials for API calls
+        machine_id = context.get("active_machine_id", "unknown")
+        auth_token = context.get("auth_token", "")
+        
+        # 2. CROSS-DOMAIN REASONING: Fetch Telemetry 
+        # The agent uses this data alongside the RAG manual to predict maintenance
+        telemetry_data = await query_telemetry(machine_id, auth_token)
+        
+        if tracer:
+            tracer.add_step(
+                step_name="Technical Agent Telemetry Fetch",
+                action_type="tool_call",
+                details={"target_machine": machine_id, "telemetry_response": telemetry_data}
+            )
+
+        # 3. Inject variables into the prompt registry
         variables = {
             "user_query": query,
             "rag_context": context.get("rag_blocks", ""),
-            "roadmap_state": context.get("system_prompt", "") 
+            "roadmap_state": context.get("system_prompt", ""),
+            "telemetry_data": telemetry_data
         }
         prompt = prompt_registry.render("technical", variables)
         
+        # 4. Assemble Messages (The YAML natively handles the few-shot rules)
         messages = [{"role": "system", "content": prompt.system_message}]
         if "messages" in context:
             messages.extend(context["messages"])
         messages.append({"role": "user", "content": prompt.user_message})
 
+        # 5. Stream the Response
         stream = self.llm.stream_response(
             model_name=self.worker_model,
             messages=messages,

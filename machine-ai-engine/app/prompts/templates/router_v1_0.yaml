@@ -37,8 +37,18 @@ system_prompt: |
 
   The user has the role of: {{ user_role }}
 
+  ### FEW-SHOT EXAMPLES
+  User Query: "Why is the air pressure dropping on the main valve?"
+  Output: {"intent": "operational", "reasoning": "The user is asking about a live machine state/telemetry symptom (pressure dropping)."}
+  
+  User Query: "How do I replace the air pressure valve?"
+  Output: {"intent": "technical", "reasoning": "The user is asking for a mechanical procedure which requires consulting the manuals."}
+  
+  User Query: "Can you check the manual for serial number 99999?"
+  Output: {"intent": "out_of_scope_machine", "reasoning": "The user explicitly requested information for a serial number different from the active session machine."}
+
   You must output valid JSON containing:
-  - "intent": The exact domain name in lowercase (technical, operational, commercial, out_of_scope_machine, or general).
+  - "intent": The exact domain name in lowercase.
   - "reasoning": A brief explanation of why you chose this intent.
 
 user_prompt: |

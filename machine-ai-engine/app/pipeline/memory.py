@@ -1,8 +1,9 @@
 # app/pipeline/memory.py
-from typing import List, Dict, Any, Optional
 import json
+from typing import List, Dict, Any, Optional
 from app.database import db
 from app.pipeline.config import active_pipeline
+from app.rag.vector_store import VectorStoreManager
 
 try:
     import tiktoken
@@ -46,7 +47,6 @@ class RoadmapMemoryProvider:
     """Fetches and formats the procedural state machine from PostgreSQL."""
 
     async def get_roadmap(self, session_id: str, company_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieves raw roadmap JSON from the database."""
         async with db.tenant_connection(company_id) as conn:
             row = await conn.fetchrow(
                 """
@@ -62,7 +62,7 @@ class RoadmapMemoryProvider:
             return None
 
     def format_system_prompt_block(self, roadmap_data: Optional[Dict[str, Any]]) -> str:
-        """Converts raw roadmap state into a concise instruction block for the LLM."""
+        """Converts raw roadmap state into an intelligent 'Focus Window' for the LLM."""
         if not roadmap_data or not roadmap_data.get("steps"):
             return ""
 
@@ -71,46 +71,74 @@ class RoadmapMemoryProvider:
 
         lines = [
             "\n### ACTIVE PROCEDURE STATE",
-            f"Current Objective: {objective}",
-            "Roadmap Steps:",
+            f"Current Objective: {objective}"
         ]
 
-        for idx, step in enumerate(steps, 1):
-            status = step.get("status", "pending").upper()
-            task = step.get("task", "")
-            lines.append(f"  {idx}. [{status}] {task}")
+        completed_count = 0
+        active_step_idx = -1
 
+        # Locate the active threshold
+        for idx, step in enumerate(steps):
+            if step.get("status") == "completed":
+                completed_count += 1
+            elif active_step_idx == -1 and step.get("status") in ["pending", "failed", "in_progress"]:
+                active_step_idx = idx
+
+        # 1. Compress the past
+        if completed_count > 0:
+            lines.append(f"Steps 1 to {completed_count}: [COMPLETED]")
+
+        # 2. Expand the present (The Active Step)
+        if active_step_idx != -1:
+            active_step = steps[active_step_idx]
+            status = active_step.get("status", "pending").upper()
+            task = active_step.get("task", "")
+            notes = active_step.get("notes", "") # Pulling contextual blocker notes
+
+            lines.append(f"\n>> CURRENT ACTIVE STEP (Step {active_step_idx + 1}): [{status}] {task}")
+            if notes:
+                lines.append(f"   Context/Blocker: {notes}")
+        else:
+            lines.append("\n>> All procedure steps are marked as completed.")
+
+        # 3. Peek at the future (Max 2 steps ahead to save tokens)
+        if active_step_idx != -1 and active_step_idx + 1 < len(steps):
+            lines.append("\nUpcoming Steps:")
+            for i in range(active_step_idx + 1, min(active_step_idx + 3, len(steps))):
+                lines.append(f"  Step {i + 1}: {steps[i].get('task', '')}")
+
+        # 4. Enforce Agent Agency
         lines.append(
-            "Instructions: Focus on guiding the user through the active/pending step. "
-            "Do not skip steps unless instructed by the technician."
+            "\nINSTRUCTIONS: Focus entirely on guiding the user through the CURRENT ACTIVE STEP. "
+            "Do not skip ahead. If the user confirms they have finished it, you MUST use your roadmap_update tool to mark it COMPLETED."
         )
         return "\n".join(lines)
 
 
 # ============================================================================
-# 3. INDEPENDENT OBJECT: Long-Term Memory / Summary Provider
+# 3. INDEPENDENT OBJECT: Long-Term Memory (Semantic Vector Store)
 # ============================================================================
 class LongTermMemoryProvider:
-    """Fetches high-level historical summaries for long-running sessions."""
+    """Fetches highly relevant historical facts across all sessions for a user/company."""
 
-    async def get_summary(self, session_id: str, company_id: str) -> Optional[str]:
-        async with db.tenant_connection(company_id) as conn:
-            row = await conn.fetchrow(
-                """
-                SELECT summary_text
-                FROM app_chat.chat_summaries
-                WHERE session_id = $1
-                ORDER BY updated_at DESC
-                LIMIT 1
-                """,
-                session_id,
-            )
-            return row["summary_text"] if row else None
+    def __init__(self):
+        # Reusing the ChromaDB setup for semantic fact retrieval
+        self.vector_store = VectorStoreManager(collection_name="user_long_term_memory")
 
-    def format_system_prompt_block(self, summary_text: Optional[str]) -> str:
-        if not summary_text:
+    def get_relevant_facts(self, company_id: str, query: str, top_k: int = 3) -> str:
+        """Queries the vector store for facts related to the current user query."""
+        results = self.vector_store.query(
+            query_text=query, 
+            top_k=top_k, 
+            where_filter={"company_id": company_id}
+        )
+        if not results:
             return ""
-        return f"\n### CONVERSATION HISTORICAL SUMMARY\n{summary_text.strip()}\n"
+        
+        lines = ["\n### RELEVANT HISTORICAL FACTS"]
+        for res in results:
+            lines.append(f"- {res['text']}")
+        return "\n".join(lines)
 
 
 # ============================================================================
@@ -132,19 +160,35 @@ class TokenOptimizer:
     def count_tokens(self, text: str) -> int:
         if self.encoder:
             return len(self.encoder.encode(text))
-        # Fallback estimation: ~4 characters per token
         return len(text) // 4
 
     def trim_history(self, messages: List[Dict[str, str]], max_token_budget: int) -> List[Dict[str, str]]:
-        """Drop oldest messages first if history exceeds token budget."""
-        trimmed = list(messages)
-        while trimmed:
-            total_tokens = sum(self.count_tokens(m["content"]) for m in trimmed)
-            if total_tokens <= max_token_budget:
+        """Drops oldest middle messages first, always preserving the 'Anchor' (first user message)."""
+        if not messages:
+            return []
+
+        # 1. Context Anchoring: Pin the very first user message to prevent amnesia
+        anchor = None
+        if len(messages) > 0 and messages[0]["role"] == "user":
+            anchor = messages[0]
+            working_list = messages[1:]
+        else:
+            working_list = list(messages)
+
+        while working_list:
+            current_tokens = sum(self.count_tokens(m["content"]) for m in working_list)
+            if anchor:
+                current_tokens += self.count_tokens(anchor["content"])
+
+            if current_tokens <= max_token_budget:
                 break
-            # Remove oldest message (from the front)
-            trimmed.pop(0)
-        return trimmed
+                
+            # 2. Prune the oldest message from the *working list* (the middle of the chat)
+            working_list.pop(0)
+
+        if anchor:
+            return [anchor] + working_list
+        return working_list
 
 
 # ============================================================================
@@ -160,28 +204,20 @@ class MemoryPipelineManager:
         self.optimizer = TokenOptimizer()
 
     async def assemble_context(
-        self, session_id: str, company_id: str, base_system_prompt: str
+        self, session_id: str, company_id: str, base_system_prompt: str, user_query: str = ""
     ) -> Dict[str, Any]:
         """
         Builds the final prompt payload respecting all enabled memory modules.
-        Returns:
-            {
-                "system_prompt": str,
-                "messages": List[Dict[str, str]],
-                "roadmap_state": Optional[Dict],
-                "tokens_used": int
-            }
         """
         system_blocks = [base_system_prompt]
         roadmap_data = None
         messages = []
 
-        # 1. Long-Term Memory (if enabled)
-        if active_pipeline.memory.long_term_enabled:
-            summary = await self.long_term.get_summary(session_id, company_id)
-            summary_block = self.long_term.format_system_prompt_block(summary)
-            if summary_block:
-                system_blocks.append(summary_block)
+        # 1. Long-Term Semantic Memory (if enabled and query provided)
+        if active_pipeline.memory.long_term_enabled and user_query:
+            facts = self.long_term.get_relevant_facts(company_id, user_query)
+            if facts:
+                system_blocks.append(facts)
 
         # 2. Stateful Roadmap (if enabled)
         if active_pipeline.memory.roadmap_enabled:

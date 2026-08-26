@@ -25,6 +25,8 @@ class CreateSessionRequest(BaseModel):
 
 @router.post("/sessions")
 async def create_chat_session(req: CreateSessionRequest):
+    print(f"[DEBUG] Incoming CreateSessionRequest: {req.model_dump()}")
+    
     """Creates a new chat session locked to a specific machine."""
     session_id = f"sess_{uuid.uuid4().hex[:8]}"
     
@@ -59,6 +61,8 @@ class ChatStreamRequest(BaseModel):
 
 @router.post("/stream")
 async def chat_stream(req: ChatStreamRequest, request: Request):
+    
+    print(f"[DEBUG] Incoming ChatStreamRequest: {req.model_dump(exclude={'auth_token'})}")
     
     # 1. VERIFY SESSION AND FETCH MACHINE ID
     async with AsyncSessionLocal() as session:
@@ -104,7 +108,7 @@ async def chat_stream(req: ChatStreamRequest, request: Request):
         executor.user_role = req.role.lower() # Ensure it's lowercase for the guardrails
         executor.active_machine_id = active_machine_id
         executor.active_machine_name = req.machine_name
-        executor.active_serial_number = str(req.serial_number) if req.serial_number else active_machine_id
+        executor.active_serial_number = str(req.serial_number) if req.serial_number else "Unknown SN"
         executor.auth_token = extracted_token
         
         final_response_buffer = ""

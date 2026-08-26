@@ -244,6 +244,7 @@ export const ChatPage = () => {
     try {
       const streamUrl = apiClient.getUri({ url: `/chat/sessions/${sessionId}/stream` });
 
+      const activeMachineSN = availableMachines.find(m => m.id === activeSession.machine_id)?.serialNumber || activeSession.machine_id;
       const activeMachineName = availableMachines.find(m => m.id === activeSession?.machine_id)?.name || 'Unknown Model';
 
       const response = await fetch(streamUrl, {
@@ -254,7 +255,8 @@ export const ChatPage = () => {
         },
         body: JSON.stringify({ 
           content: messageContent,
-          machine_name: activeMachineName
+          machine_name: activeMachineName,
+          serial_number: activeMachineSN
         })
       });
 
