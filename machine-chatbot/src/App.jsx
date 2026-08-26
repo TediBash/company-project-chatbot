@@ -18,6 +18,8 @@ import { CommercialPage } from './pages/Commercial';
 import { ChatPage } from './pages/Chat';
 import { QuotesPage } from './pages/Quotes';
 import { QuoteBuilderPage } from './pages/QuoteBuilder';
+import { OrdersPage } from './pages/Orders';
+import { OrderFulfillmentPage } from './pages/OrderFulfillment';
 
 // Placeholders for standard routes
 const NotFound = () => <div className="p-8 text-red-600">Tenant Not Found</div>;
@@ -70,12 +72,13 @@ function App() {
             <Route path="/commercial" element={<RoleGuard allowedRoles={['full', 'commercial']}><CommercialPage /></RoleGuard>} />
             <Route path="/quotes" element={<RoleGuard allowedRoles={['full', 'commercial']}><QuotesPage /></RoleGuard>} />
             <Route path="/commercial/quotes/:id" element={<RoleGuard allowedRoles={['full', 'commercial']}><QuoteBuilderPage /></RoleGuard>} />
+            <Route path="/commercial/orders" element={<RoleGuard allowedRoles={['full', 'commercial']}><OrdersPage /></RoleGuard>} />
+            <Route path="/commercial/orders/:id" element={<RoleGuard allowedRoles={['full', 'commercial']}><OrderFulfillmentPage /></RoleGuard>} />
 
             {/* AROL-ONLY ROUTES */}
             <Route path="/arol/models" element={<PlatformOwnerGuard><ModelsPage /></PlatformOwnerGuard>} />
             <Route path="/arol/companies" element={<PlatformOwnerGuard><CompaniesPage /></PlatformOwnerGuard>} />
             <Route path="/arol/provisioning" element={<PlatformOwnerGuard><ProvisioningPage /></PlatformOwnerGuard>} />
-
           </Route>
         </Route>
       </Routes>

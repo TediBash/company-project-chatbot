@@ -6,7 +6,7 @@ import { query } from '../../config/db.js';
 
 // GET /api/orders
 export const getOrders = async (req, res) => {
-  const { search, page = 1, limit = 25 } = req.query;
+  const { search, quoteId, page = 1, limit = 25 } = req.query;
   const offset = (page - 1) * limit;
 
   // Enforce Tenant Isolation
@@ -26,6 +26,13 @@ export const getOrders = async (req, res) => {
       paramIndex++;
     }
 
+    if (quoteId) {
+      // Assuming your DB stores UUIDs, we use ILIKE to match partial strings like the first 8 characters
+      whereClause += ` AND CAST(quote_id AS TEXT) ILIKE $${paramIndex}`;
+      params.push(`%${quoteId}%`);
+      paramIndex++;
+    }
+
     // 1. Get Total Count for Pagination Metadata
     const countSql = `SELECT COUNT(order_id) AS total FROM app_commercial.orders ${whereClause}`;
     const countRes = await query(countSql, params);
@@ -33,7 +40,7 @@ export const getOrders = async (req, res) => {
 
     // 2. Fetch Paginated Data
     const dataSql = `
-      SELECT order_id AS "id", quote_id AS "quoteId", order_status AS "orderStatus", 
+      SELECT order_id AS "id", quote_revision_id AS "quoteId", order_status AS "orderStatus", 
              order_date AS "orderDate", expected_delivery_date AS "expectedDeliveryDate", 
              shipment_status AS "shipmentStatus", currency, notes
       FROM app_commercial.orders 
@@ -69,7 +76,7 @@ export const getOrderDetails = async (req, res) => {
   try {
     // 1. Fetch Order
     const orderSql = `
-      SELECT order_id AS "id", quote_id AS "quoteId", order_status AS "orderStatus", 
+      SELECT order_id AS "id", quote_revision_id AS "quoteId", order_status AS "orderStatus", 
              order_date AS "orderDate", expected_delivery_date AS "expectedDeliveryDate", 
              shipment_status AS "shipmentStatus", currency, notes
       FROM app_commercial.orders 
@@ -80,7 +87,11 @@ export const getOrderDetails = async (req, res) => {
 
     // 2. Fetch Order Lines
     const linesSql = `
-      SELECT line_id AS "id", fulfillment_status AS "fulfillmentStatus"
+      SELECT 
+        line_id AS "id", 
+        fulfillment_status AS "fulfillmentStatus",
+        item_description AS "itemDescription",
+        machine_id AS "machineId"
       FROM app_commercial.order_lines 
       WHERE order_id = $1
     `;
@@ -97,24 +108,74 @@ export const getOrderDetails = async (req, res) => {
 };
 
 // POST /api/orders
+// POST /api/orders
 export const createOrder = async (req, res) => {
-  const { quoteId, orderStatus, orderDate, expectedDeliveryDate, shipmentStatus, currency, notes } = req.body;
+  const { 
+    quoteId, 
+    quoteRevisionId, 
+    orderStatus, 
+    orderDate, 
+    expectedDeliveryDate, 
+    shipmentStatus, 
+    currency, 
+    notes 
+  } = req.body;
+  
   const companyId = req.tenant.companyId;
 
   try {
-    const sql = `
+    // 1. Create the Parent Order
+    const orderSql = `
       INSERT INTO app_commercial.orders 
-        (company_id, quote_id, order_status, order_date, expected_delivery_date, shipment_status, currency, notes)
+        (company_id, quote_revision_id, order_status, order_date, expected_delivery_date, shipment_status, currency, notes)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING order_id AS "id", order_status AS "orderStatus", order_date AS "orderDate"
     `;
-    const { rows } = await query(sql, [
-      companyId, quoteId || null, orderStatus, orderDate, expectedDeliveryDate, shipmentStatus, currency, notes
+    
+    const { rows } = await query(orderSql, [
+      companyId, 
+      quoteRevisionId || null, 
+      orderStatus, 
+      orderDate, 
+      expectedDeliveryDate || null, 
+      shipmentStatus, 
+      currency, 
+      notes
     ]);
-    res.status(201).json(rows[0]);
+    
+    const newOrderId = rows[0].id;
+
+    // 2. Automatically generate Order Lines from the Quote Revision Lines
+    if (quoteRevisionId) {
+      const linesSql = `
+        INSERT INTO app_commercial.order_lines (
+          order_id, 
+          fulfillment_status, 
+          quote_line_id, 
+          item_description, 
+          machine_id
+        )
+        SELECT 
+          $1, 
+          'Pending', 
+          line_id, 
+          item_description, 
+          machine_id
+        FROM app_commercial.quote_lines
+        WHERE quote_revision_id = $2
+      `;
+      
+      await query(linesSql, [newOrderId, quoteRevisionId]);
+    }
+
+    res.status(201).json({ 
+      message: 'Order and associated line items created successfully.',
+      data: rows[0] 
+    });
+    
   } catch (error) {
     console.error('[CREATE Order Error]', error);
-    res.status(500).json({ message: 'Failed to create order.' });
+    res.status(500).json({ message: 'Failed to create order and line items.' });
   }
 };
 
