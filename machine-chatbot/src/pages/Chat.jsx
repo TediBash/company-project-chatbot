@@ -1,6 +1,6 @@
 // src/pages/Chat.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom'; // NEW: Added for deep linking
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { jwtDecode } from 'jwt-decode';
 import { BaseModal } from '../components/ui/BaseModal';
@@ -9,7 +9,7 @@ export const ChatPage = () => {
   // 1. Role & Permissions Extraction
   let isAdmin = false;
   let currentUserId = null;
-  let currentCompanyId = 'arol_corp'; // Fallback company ID
+  let currentCompanyId = 'arol_corp'; 
   const token = localStorage.getItem('arol_token');
   
   if (token) {
@@ -21,7 +21,6 @@ export const ChatPage = () => {
     } catch (e) {}
   }
 
-  // Router hooks for QR code deep-linking
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -31,9 +30,10 @@ export const ChatPage = () => {
   const [messages, setMessages] = useState([]);
   const [roadmap, setRoadmap] = useState({ steps: [] });
   
-  // NEW: Machine Selection State
+  // NEW: Machine Selection & Fixed Context State
   const [availableMachines, setAvailableMachines] = useState([]);
   const [selectedMachine, setSelectedMachine] = useState('');
+  const [activeMachineContext, setActiveMachineContext] = useState(null);
   
   // 3. Admin Toggle & Search State
   const [viewAll, setViewAll] = useState(false);
@@ -60,30 +60,24 @@ export const ChatPage = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState(null);
 
-  // 6. UI Layout States
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(true);
 
-  // Auto-scroll to bottom of chat
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => { if (agentStatus) scrollToBottom(); }, [agentStatus]);
 
-// Fetch Available Machines & Handle QR Code Deep Linking
+  // Fetch Available Machines & Handle QR Code Deep Linking
   useEffect(() => {
     const fetchMachines = async () => {
       try {
-        // Fetch machines using your existing Express router
         const response = await apiClient.get('/machines');
-        
-        // Map the backend data to match the format expected by the React state
         const formattedMachines = response.data.map(machine => ({
-          id: machine.id, // The database machine_id 
-          serialNumber: machine.serialNumber, // e.g., "15610"
+          id: machine.id, 
+          serialNumber: machine.serialNumber, 
           name: machine.modelDescription || machine.modelCode || 'Unknown Model'
         }));
-        
         setAvailableMachines(formattedMachines);
       } catch (err) {
         console.error('Failed to load company machines', err);
@@ -92,15 +86,35 @@ export const ChatPage = () => {
     
     fetchMachines();
 
-    // Check if user arrived via QR Code URL (e.g., /chat?machineId=15610)
     const urlMachineId = searchParams.get('machineId');
     if (urlMachineId) {
       setSelectedMachine(urlMachineId);
       setIsCreateModalOpen(true);
-      // Clean up the URL so it doesn't trigger again on refresh
       setSearchParams({});
     }
   }, [searchParams, setSearchParams]);
+
+  // --- NEW: Lock Machine Context strictly upon session change ---
+  useEffect(() => {
+    if (activeSession?.machine_id && availableMachines.length > 0) {
+      const machine = availableMachines.find(m => m.id === activeSession.machine_id);
+      if (machine) {
+        setActiveMachineContext({
+          id: machine.id,
+          name: machine.name,
+          serialNumber: machine.serialNumber
+        });
+      } else {
+        setActiveMachineContext({
+          id: activeSession.machine_id,
+          name: 'Unknown Model',
+          serialNumber: activeSession.machine_id // Fallback safety
+        });
+      }
+    } else {
+      setActiveMachineContext(null);
+    }
+  }, [activeSession, availableMachines]);
 
   // Fetch Session History Sidebar
   const fetchSessions = useCallback(async () => {
@@ -119,7 +133,6 @@ export const ChatPage = () => {
     return () => clearTimeout(delayDebounce);
   }, [fetchSessions]);
 
-  // Load Initial Conversation (Latest 5)
   const loadConversation = async (sessionId) => {
     try {
       const response = await apiClient.get(`/chat/sessions/${sessionId}`);
@@ -134,7 +147,6 @@ export const ChatPage = () => {
     }
   };
 
-  // Scroll Event Listener (Pagination)
   const handleScroll = async (e) => {
     if (e.target.scrollTop === 0 && hasMore && !isLoadingMore) {
       const oldestMessage = messages[0];
@@ -166,7 +178,6 @@ export const ChatPage = () => {
     }
   };
 
-  // UPDATED: Create New Session locked to Machine
   const handleCreateSession = async (e) => {
     e.preventDefault();
     if (!selectedMachine) {
@@ -175,7 +186,6 @@ export const ChatPage = () => {
     }
     
     try {
-      // Send the machine_id and company_id to the new backend endpoint
       const res = await apiClient.post('/chat/sessions', { 
         title: newChatTitle || `Diagnostic Session: ${selectedMachine}`,
         machine_id: selectedMachine,
@@ -189,16 +199,12 @@ export const ChatPage = () => {
       setNewChatTitle('');
       setSelectedMachine('');
       fetchSessions();
-      
-      // Navigate to the clean session URL if needed
-      // navigate(`/chat/${res.data.session_id}`);
     } catch (err) {
       console.error('Failed to create chat', err);
       alert('Failed to create chat session.');
     }
   };
 
-  // Update Session Title manually
   const handleUpdateTitle = async (e) => {
     e.preventDefault();
     try {
@@ -212,7 +218,6 @@ export const ChatPage = () => {
     }
   };
 
-  // Delete Session
   const handleDeleteSession = async () => {
     if (!sessionToDelete) return;
     try {
@@ -223,6 +228,7 @@ export const ChatPage = () => {
         setActiveSession(null);
         setMessages([]);
         setRoadmap({ steps: [] });
+        setActiveMachineContext(null); // Clear context
       }
       
       setIsDeleteModalOpen(false);
@@ -233,7 +239,6 @@ export const ChatPage = () => {
     }
   };
 
-  // SSE Stream Handler
   const sendMessageStream = async (sessionId, messageContent) => {
     setMessages(prev => [...prev, { role: 'user', content: messageContent }]);
     setTimeout(scrollToBottom, 50);
@@ -244,8 +249,9 @@ export const ChatPage = () => {
     try {
       const streamUrl = apiClient.getUri({ url: `/chat/sessions/${sessionId}/stream` });
 
-      const activeMachineSN = availableMachines.find(m => m.id === activeSession.machine_id)?.serialNumber || activeSession.machine_id;
-      const activeMachineName = availableMachines.find(m => m.id === activeSession?.machine_id)?.name || 'Unknown Model';
+      // --- FIX: Use strictly the locked context ---
+      const activeMachineSN = activeMachineContext?.serialNumber || '';
+      const activeMachineName = activeMachineContext?.name || 'Unknown Model';
 
       const response = await fetch(streamUrl, {
         method: 'POST',
@@ -358,40 +364,39 @@ export const ChatPage = () => {
       
       const sessionId = activeSession.session_id || activeSession.id;
 
-      // 1. Force unwrapping of the data
       let data = actionData;
       if (Array.isArray(data)) data = data[0];
       if (typeof data === 'string') {
         try { data = JSON.parse(data); } catch(e) {}
       }
 
-      // 2. Extract action type and details
       const actionType = data?.action || data?.action_type || "create_commercial_request";
       let actionDetails = data?.details || data?.payload || {};
       
-      if (!actionDetails.type && data?.type) {
-        actionDetails = { title: data.title, type: data.type, urgency: data.urgency };
-      }
-
-      // 3. Build the exact JSON body
+      // ---> FIX 1: Extract fields explicitly to the top level of the request <---
       const requestBody = {
         action: actionType,
-        payload: actionDetails,
-        machine_id: activeSession?.machine_id || '', 
+        details: actionDetails,
+        machine_id: activeMachineContext?.id || activeSession?.machine_id || '', // Use locked context
         company_id: activeSession?.company_id || '', 
-        approved: approved
+        approved: approved,
+        
+        // Extracting specific ticket fields for Python
+        title: actionDetails.title || data?.title || `Request for ${activeMachineContext?.name || 'Machine'}`,
+        type: actionDetails.type || data?.type || 'spare_parts',
+        urgency: actionDetails.urgency || data?.urgency || 'medium',
+        description: actionDetails.description || data?.description || 'Automated request via AI Assistant.'
       };
 
-      console.log("[DEBUG] Sending via Fetch:", requestBody);
+      console.log("[DEBUG] Chat.jsx Sending to Node:", requestBody);
 
-      // 4. BYPASS AXIOS INTERCEPTORS: Use native fetch!
       const actionUrl = apiClient.getUri({ url: `/chat/sessions/${sessionId}/action` });
       
       const response = await fetch(actionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // token is extracted at the top of Chat.jsx
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(requestBody)
       });
@@ -403,7 +408,6 @@ export const ChatPage = () => {
 
       const resData = await response.json();
       
-      // 5. Update UI to hide the buttons
       setMessages(prev => {
         const newMessages = [...prev];
         if (messageIndex !== undefined && newMessages[messageIndex]) {
@@ -450,22 +454,39 @@ export const ChatPage = () => {
               <p className="text-xs text-gray-600 mb-4 font-mono bg-white p-2 border border-gray-100 rounded">
                 {JSON.stringify(actionPayload.details, null, 2)}
               </p>
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => handleHumanInTheLoop(actionPayload, true)}
-                  disabled={isProcessing}
-                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold py-2 rounded transition-colors disabled:opacity-50"
-                >
-                  Approve Action
-                </button>
-                <button 
-                  onClick={() => handleHumanInTheLoop(actionPayload, false)}
-                  disabled={isProcessing}
-                  className="flex-1 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 text-xs font-bold py-2 rounded transition-colors disabled:opacity-50"
-                >
-                  Reject
-                </button>
-              </div>
+              
+              {actionPayload.isResolved ? (
+                <div className="flex gap-2 items-center mt-3 p-2.5 bg-white rounded border border-gray-200 shadow-sm">
+                  {actionPayload.approved ? (
+                    <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg> 
+                      Action Approved
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg> 
+                      Action Rejected
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="flex gap-3 mt-3">
+                  <button 
+                    onClick={() => handleHumanInTheLoop(actionPayload, true, index)}
+                    disabled={isProcessing}
+                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold py-2 rounded transition-colors disabled:opacity-50"
+                  >
+                    Approve Action
+                  </button>
+                  <button 
+                    onClick={() => handleHumanInTheLoop(actionPayload, false, index)}
+                    disabled={isProcessing}
+                    className="flex-1 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 text-xs font-bold py-2 rounded transition-colors disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -544,22 +565,20 @@ export const ChatPage = () => {
 
       {/* CENTER: Main Chat Interface */}
       <div className="flex-1 flex flex-col relative">
-        {/* Chat Header */}
         <div className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
           <div className="flex flex-col justify-center">
             <h2 className="text-lg font-light text-gray-900 leading-tight">
               {activeSession ? activeSession.title : 'Select or create a chat to begin'}
             </h2>
             
-            {/* UPDATED: Dynamically look up the machine name from availableMachines state */}
-            {activeSession?.machine_id && (
+            {/* --- FIX: Use strictly the locked context --- */}
+            {activeMachineContext && (
               <p className="text-[10px] font-bold text-[var(--color-tenant-primary)] uppercase tracking-widest mt-0.5 flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                 </svg>
-                {/* Look up the name, fallback to ID if not found */}
-                {availableMachines.find(m => m.id === activeSession.machine_id)?.name || 'Unknown Machine'} 
-                <span className="text-gray-400 font-medium ml-1">(SN: {availableMachines.find(m => m.id === activeSession.machine_id)?.serialNumber || activeSession.machine_id})</span>
+                {activeMachineContext.name}
+                <span className="text-gray-400 font-medium ml-1">(SN: {activeMachineContext.serialNumber})</span>
               </p>
             )}
           </div>
@@ -643,7 +662,7 @@ export const ChatPage = () => {
         </div>
       </div>
 
-      {/* RIGHT SIDEBAR: Roadmap (Unchanged) */}
+      {/* RIGHT SIDEBAR: Roadmap */}
       <div className={`bg-white border-l border-gray-200 hidden lg:flex flex-col shadow-[-4px_0_15px_-5px_rgba(0,0,0,0.05)] z-10 transition-all duration-300 ${isRoadmapOpen ? 'w-72' : 'w-14 items-center'}`}>
         <div className={`p-4 border-b border-gray-100 bg-gray-50/50 flex ${isRoadmapOpen ? 'justify-between' : 'justify-center'} items-center shrink-0`}>
           {isRoadmapOpen && <h3 className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-500 truncate mr-2">Live Roadmap</h3>}
@@ -703,11 +722,8 @@ export const ChatPage = () => {
       </div>
 
       {/* --- MODALS --- */}
-      
-      {/* 1. UPDATED Create Modal: Now requires Machine Selection */}
       <BaseModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Start New Conversation">
         <form onSubmit={handleCreateSession} className="space-y-5">
-          
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Select Machinery *</label>
             <select
@@ -743,7 +759,6 @@ export const ChatPage = () => {
         </form>
       </BaseModal>
 
-      {/* 2. Edit Title Modal */}
       <BaseModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Rename Conversation">
         <form onSubmit={handleUpdateTitle} className="space-y-6">
           <div className="space-y-1">
@@ -763,7 +778,6 @@ export const ChatPage = () => {
         </form>
       </BaseModal>
 
-      {/* 3. Delete Modal */}
       <BaseModal isOpen={isDeleteModalOpen} onClose={() => { setIsDeleteModalOpen(false); setSessionToDelete(null); }} title="Confirm Deletion">
         <div className="space-y-6">
           <p className="text-sm font-light text-gray-600">

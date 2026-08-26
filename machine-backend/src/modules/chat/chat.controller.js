@@ -229,7 +229,7 @@ export const streamMessage = async (req, res) => {
 // Proxy HITL (Human-in-the-Loop) resolution to Python
 export const confirmAction = async (req, res) => {
   const { id: sessionId } = req.params;
-  const { action, details, approved } = req.body;
+  const { action, details, approved, machine_id, title, type, urgency, description } = req.body;
   
   const companyId = req.tenant.companyId;
   const userId = req.user.id;
@@ -251,7 +251,12 @@ export const confirmAction = async (req, res) => {
         user_id: userId,
         action,
         details,
-        approved
+        approved,
+        machine_id,
+        title,
+        type,
+        urgency,
+        description
       })
     });
 
