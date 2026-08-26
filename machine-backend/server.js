@@ -14,6 +14,8 @@ import modelsRoutes from './src/modules/models/models.routes.js';
 import provisioningRoutes from './src/modules/provisioning/provisioning.routes.js';
 import commercialRoutes from './src/modules/commercial/commercial.routes.js';
 import chatRoutes from './src/modules/chat/chat.routes.js';
+import quoteRoutes from './src/modules/quotes/quotes.routes.js';
+import orderRoutes from './src/modules/orders/orders.routes.js';
 
 dotenv.config();
 
@@ -45,6 +47,8 @@ app.use('/api/models', modelsRoutes);
 app.use('/api/provisioning', provisioningRoutes);
 app.use('/api/commercial', commercialRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/quotes', quoteRoutes);
+app.use('/api/orders', orderRoutes);
 
 
 app.listen(PORT, async () => {
