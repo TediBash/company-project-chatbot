@@ -7,18 +7,27 @@ import { query } from '../../config/db.js';
 
 // GET /api/quotes
 export const getQuotes = async (req, res) => {
-  const { search, machineId, status, page = 1, limit = 25 } = req.query;
+  const { search, machineId, status, page = 1, limit = 25, companyId } = req.query;
   const offset = (page - 1) * limit;
 
-  // Enforce Tenant Isolation
-  const companyId = req.tenant.isPlatformOwner && req.query.companyId 
-    ? req.query.companyId 
-    : req.tenant.companyId;
-
   try {
-    let whereClause = `WHERE company_id = $1`;
-    const params = [companyId];
-    let paramIndex = 2;
+    let whereClause = `WHERE 1=1`;
+    const params = [];
+    let paramIndex = 1;
+
+    // Tenant Isolation Logic
+    if (!req.tenant.isPlatformOwner) {
+      // Standard users ONLY see their own company
+      whereClause += ` AND company_id = $${paramIndex}`;
+      params.push(req.tenant.companyId);
+      paramIndex++;
+    } else if (companyId) {
+      // Platform owners can filter by a specific client
+      whereClause += ` AND company_id = $${paramIndex}`;
+      params.push(companyId);
+      paramIndex++;
+    }
+    // If Platform Owner AND no companyId provided, skip the filter to show ALL quotes
 
     // Apply Search Filter (searching within the description)
     if (search) {
@@ -28,7 +37,6 @@ export const getQuotes = async (req, res) => {
     }
 
     if (machineId) {
-      // Requires a JOIN or EXISTS subquery to check quote_lines
       whereClause += ` AND EXISTS(SELECT 1 FROM app_commercial.quote_revisions qr JOIN app_commercial.quote_lines ql ON qr.revision_id = ql.quote_revision_id WHERE qr.quote_id = q.quote_id AND ql.machine_id = $${paramIndex})`;
       params.push(machineId);
       paramIndex++;

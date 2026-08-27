@@ -191,7 +191,10 @@ export const OrdersPage = () => {
       name: 'companyId', type: 'select', className: 'w-48',
       options: [
         { value: '', label: 'All Companies' },
-        ...options.companies.map(c => ({ value: c.id, label: c.name }))
+        ...options.companies.map(c => ({ 
+          value: c.id || c.company_id, 
+          label: c.name || c.companyName || c.company_name || c.id || 'Unknown Company' 
+        }))
       ]
     });
   }
@@ -251,10 +254,19 @@ export const OrdersPage = () => {
       key: 'company',
       label: 'Client Company',
       render: (_, row) => {
-        const company = options.companies.find(c => c.id === row.companyId);
+        // 1. Safely match the ID regardless of backend casing
+        const company = options.companies.find(c => 
+          (c.id || c.company_id) === row.companyId
+        );
+        
+        // 2. Safely extract the name regardless of backend casing
+        const displayName = company 
+          ? (company.name || company.companyName || company.company_name || 'Unnamed Company') 
+          : (row.companyId || 'Unknown');
+
         return (
           <span className="font-semibold text-[var(--color-tenant-primary)] text-sm block">
-            {company ? company.name : (row.companyId || 'Unknown')}
+            {displayName}
           </span>
         );
       }
@@ -290,12 +302,15 @@ export const OrdersPage = () => {
       label: 'Actions',
       render: (_, row) => (
         <div className="flex gap-4 items-center">
-          <button 
-            onClick={() => openModal(row)}
-            className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
-          >
-            Edit Info
-          </button>
+          {/* Conditionally hide Edit Info for standard users */}
+          {isPlatformOwner && (
+            <button 
+              onClick={() => openModal(row)}
+              className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+            >
+              Edit Info
+            </button>
+          )}
           <button 
             onClick={() => navigate(`/commercial/orders/${row.id}`)}
             className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-tenant-primary)] hover:opacity-80 transition-opacity bg-blue-50 px-2 py-1.5 rounded"
@@ -334,12 +349,14 @@ export const OrdersPage = () => {
           values={filters} 
           onChange={handleFilterChange} 
           actionButton={
-            <button 
-              onClick={() => openModal()} 
-              className={`px-6 py-2 text-xs font-bold text-white rounded-md uppercase tracking-wider shadow-sm transition-colors ${isPlatformOwner ? 'bg-gray-900 hover:bg-black' : 'bg-[var(--color-tenant-primary)] hover:opacity-90'}`}
-            >
-              + Create Order
-            </button>
+            isPlatformOwner ? (
+              <button 
+                onClick={() => openModal()} 
+                className="px-6 py-2 text-xs font-bold text-white rounded-md uppercase tracking-wider shadow-sm transition-colors bg-gray-900 hover:bg-black"
+              >
+                + Create Order
+              </button>
+            ) : null
           }
         />
       </div>
@@ -376,7 +393,7 @@ export const OrdersPage = () => {
         )}
       </div>
 
-      {isModalOpen && (
+      {isPlatformOwner && isModalOpen && (
         <BaseModal 
           isOpen={true} 
           onClose={() => setIsModalOpen(false)} 
@@ -384,22 +401,22 @@ export const OrdersPage = () => {
         >
           <form onSubmit={handleSave} className="space-y-6">
             
-            {isPlatformOwner && (
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Target Client Company</label>
-                <select 
-                  required disabled={!!selectedOrder}
-                  value={form.companyId} 
-                  onChange={(e) => setForm({...form, companyId: e.target.value, quoteId: '', quoteRevisionId: ''})} 
-                  className="w-full border-b border-gray-300 py-2 text-sm bg-white focus:outline-none focus:border-[var(--color-tenant-primary)] disabled:bg-gray-50 disabled:text-gray-500"
-                >
-                  <option value="">-- Select a Client --</option>
-                  {options.companies.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Target Client Company</label>
+              <select 
+                required disabled={!!selectedOrder}
+                value={form.companyId} 
+                onChange={(e) => setForm({...form, companyId: e.target.value, quoteId: '', quoteRevisionId: ''})} 
+                className="w-full border-b border-gray-300 py-2 text-sm bg-white focus:outline-none focus:border-[var(--color-tenant-primary)] disabled:bg-gray-50 disabled:text-gray-500"
+              >
+                <option value="">-- Select a Client --</option>
+                {options.companies.map(c => (
+                  <option key={c.id || c.company_id} value={c.id || c.company_id}>
+                    {c.name || c.companyName || c.company_name || c.id || 'Unknown Company'}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-1">

@@ -6,18 +6,27 @@ import { query } from '../../config/db.js';
 
 // GET /api/orders
 export const getOrders = async (req, res) => {
-  const { search, quoteId, page = 1, limit = 25 } = req.query;
+  const { search, quoteId, page = 1, limit = 25, companyId } = req.query;
   const offset = (page - 1) * limit;
 
-  // Enforce Tenant Isolation
-  const companyId = req.tenant.isPlatformOwner && req.query.companyId 
-    ? req.query.companyId 
-    : req.tenant.companyId;
-
   try {
-    let whereClause = `WHERE company_id = $1`;
-    const params = [companyId];
-    let paramIndex = 2;
+    let whereClause = `WHERE 1=1`;
+    const params = [];
+    let paramIndex = 1;
+
+    // Tenant Isolation Logic
+    if (!req.tenant.isPlatformOwner) {
+      // Standard users ONLY see their own company
+      whereClause += ` AND company_id = $${paramIndex}`;
+      params.push(req.tenant.companyId);
+      paramIndex++;
+    } else if (companyId) {
+      // Platform owners can filter by a specific client
+      whereClause += ` AND company_id = $${paramIndex}`;
+      params.push(companyId);
+      paramIndex++;
+    }
+    // If Platform Owner AND no companyId provided, skip the filter to show ALL orders
 
     // Apply Search Filter (searching within notes or status)
     if (search) {
@@ -27,7 +36,6 @@ export const getOrders = async (req, res) => {
     }
 
     if (quoteId) {
-      // Assuming your DB stores UUIDs, we use ILIKE to match partial strings like the first 8 characters
       whereClause += ` AND CAST(quote_id AS TEXT) ILIKE $${paramIndex}`;
       params.push(`%${quoteId}%`);
       paramIndex++;
@@ -39,9 +47,11 @@ export const getOrders = async (req, res) => {
     const totalRecords = parseInt(countRes.rows[0].total) || 0;
 
     // 2. Fetch Paginated Data
+    // NOTE: Added company_id AS "companyId" to explicitly return the tenant reference
     const dataSql = `
-      SELECT order_id AS "id", quote_revision_id AS "quoteId", order_status AS "orderStatus", 
-             order_date AS "orderDate", expected_delivery_date AS "expectedDeliveryDate", 
+      SELECT order_id AS "id", company_id AS "companyId", quote_revision_id AS "quoteId", 
+             order_status AS "orderStatus", order_date AS "orderDate", 
+             expected_delivery_date AS "expectedDeliveryDate", 
              shipment_status AS "shipmentStatus", currency, notes
       FROM app_commercial.orders 
       ${whereClause} 
@@ -72,17 +82,29 @@ export const getOrders = async (req, res) => {
 export const getOrderDetails = async (req, res) => {
   const { id } = req.params;
   const companyId = req.tenant.companyId;
+  const isPlatformOwner = req.tenant.isPlatformOwner;
 
   try {
-    // 1. Fetch Order
-    const orderSql = `
-      SELECT order_id AS "id", quote_revision_id AS "quoteId", order_status AS "orderStatus", 
-             order_date AS "orderDate", expected_delivery_date AS "expectedDeliveryDate", 
-             shipment_status AS "shipmentStatus", currency, notes
-      FROM app_commercial.orders 
-      WHERE order_id = $1 AND company_id = $2
-    `;
-    const orderRes = await query(orderSql, [id, companyId]);
+    // Bypass strict company check for Platform Owners & return companyId
+    const orderSql = isPlatformOwner
+      ? `
+        SELECT order_id AS "id", company_id AS "companyId", quote_revision_id AS "quoteId", order_status AS "orderStatus", 
+               order_date AS "orderDate", expected_delivery_date AS "expectedDeliveryDate", 
+               shipment_status AS "shipmentStatus", currency, notes
+        FROM app_commercial.orders 
+        WHERE order_id = $1
+      `
+      : `
+        SELECT order_id AS "id", company_id AS "companyId", quote_revision_id AS "quoteId", order_status AS "orderStatus", 
+               order_date AS "orderDate", expected_delivery_date AS "expectedDeliveryDate", 
+               shipment_status AS "shipmentStatus", currency, notes
+        FROM app_commercial.orders 
+        WHERE order_id = $1 AND company_id = $2
+      `;
+      
+    const params = isPlatformOwner ? [id] : [id, companyId];
+    const orderRes = await query(orderSql, params);
+    
     if (orderRes.rows.length === 0) return res.status(404).json({ message: 'Order not found.' });
 
     // 2. Fetch Order Lines
@@ -108,9 +130,9 @@ export const getOrderDetails = async (req, res) => {
 };
 
 // POST /api/orders
-// POST /api/orders
 export const createOrder = async (req, res) => {
   const { 
+    companyId, // Extract from body instead of req.tenant
     quoteId, 
     quoteRevisionId, 
     orderStatus, 
@@ -121,10 +143,9 @@ export const createOrder = async (req, res) => {
     notes 
   } = req.body;
   
-  const companyId = req.tenant.companyId;
+  if (!companyId) return res.status(400).json({ message: 'Company ID is required.' });
 
   try {
-    // 1. Create the Parent Order
     const orderSql = `
       INSERT INTO app_commercial.orders 
         (company_id, quote_revision_id, order_status, order_date, expected_delivery_date, shipment_status, currency, notes)
@@ -145,37 +166,23 @@ export const createOrder = async (req, res) => {
     
     const newOrderId = rows[0].id;
 
-    // 2. Automatically generate Order Lines from the Quote Revision Lines
+    // Automatically generate Order Lines from the Quote Revision Lines
     if (quoteRevisionId) {
       const linesSql = `
         INSERT INTO app_commercial.order_lines (
-          order_id, 
-          fulfillment_status, 
-          quote_line_id, 
-          item_description, 
-          machine_id
+          order_id, fulfillment_status, quote_line_id, item_description, machine_id
         )
-        SELECT 
-          $1, 
-          'Pending', 
-          line_id, 
-          item_description, 
-          machine_id
+        SELECT $1, 'Pending', line_id, item_description, machine_id
         FROM app_commercial.quote_lines
         WHERE quote_revision_id = $2
       `;
-      
       await query(linesSql, [newOrderId, quoteRevisionId]);
     }
 
-    res.status(201).json({ 
-      message: 'Order and associated line items created successfully.',
-      data: rows[0] 
-    });
-    
+    res.status(201).json({ message: 'Order created successfully.', data: rows[0] });
   } catch (error) {
     console.error('[CREATE Order Error]', error);
-    res.status(500).json({ message: 'Failed to create order and line items.' });
+    res.status(500).json({ message: 'Failed to create order.' });
   }
 };
 
@@ -183,20 +190,17 @@ export const createOrder = async (req, res) => {
 export const updateOrder = async (req, res) => {
   const { id } = req.params;
   const { orderStatus, orderDate, expectedDeliveryDate, shipmentStatus, currency, notes } = req.body;
-  const companyId = req.tenant.companyId;
 
   try {
     const sql = `
       UPDATE app_commercial.orders 
       SET order_status = $1, order_date = $2, expected_delivery_date = $3, 
           shipment_status = $4, currency = $5, notes = $6
-      WHERE order_id = $7 AND company_id = $8
+      WHERE order_id = $7
       RETURNING order_id AS "id"
     `;
-    const { rows } = await query(sql, [
-      orderStatus, orderDate, expectedDeliveryDate, shipmentStatus, currency, notes, id, companyId
-    ]);
-    if (rows.length === 0) return res.status(404).json({ message: 'Order not found or access denied.' });
+    const { rows } = await query(sql, [orderStatus, orderDate, expectedDeliveryDate, shipmentStatus, currency, notes, id]);
+    if (rows.length === 0) return res.status(404).json({ message: 'Order not found.' });
     
     res.json({ message: 'Order updated successfully.' });
   } catch (error) {
@@ -208,13 +212,12 @@ export const updateOrder = async (req, res) => {
 // DELETE /api/orders/:id
 export const deleteOrder = async (req, res) => {
   const { id } = req.params;
-  const companyId = req.tenant.companyId;
 
   try {
-    const sql = `DELETE FROM app_commercial.orders WHERE order_id = $1 AND company_id = $2 RETURNING order_id`;
-    const { rows } = await query(sql, [id, companyId]);
+    const sql = `DELETE FROM app_commercial.orders WHERE order_id = $1 RETURNING order_id`;
+    const { rows } = await query(sql, [id]);
     
-    if (rows.length === 0) return res.status(404).json({ message: 'Order not found or access denied.' });
+    if (rows.length === 0) return res.status(404).json({ message: 'Order not found.' });
     res.json({ message: 'Order deleted successfully.' });
   } catch (error) {
     console.error('[DELETE Order Error]', error);
@@ -226,28 +229,28 @@ export const deleteOrder = async (req, res) => {
 // 2. ORDER LINES (Nested Actions)
 // ==========================================
 
-// ==========================================
-// 2. ORDER LINES CRUD (Expanded)
-// ==========================================
-
 // GET /api/orders/:orderId/lines
 export const getOrderLines = async (req, res) => {
   const { orderId } = req.params;
   const companyId = req.tenant.companyId;
+  const isPlatformOwner = req.tenant.isPlatformOwner;
 
   try {
-    // 1. Verify order belongs to tenant
-    const orderCheck = await query(
-      `SELECT order_id FROM app_commercial.orders WHERE order_id = $1 AND company_id = $2`,
-      [orderId, companyId]
-    );
-    if (orderCheck.rows.length === 0) {
-      return res.status(404).json({ message: 'Order not found or access denied.' });
+    if (!isPlatformOwner) {
+      // 1. Verify order belongs to standard tenant
+      const orderCheck = await query(
+        `SELECT order_id FROM app_commercial.orders WHERE order_id = $1 AND company_id = $2`,
+        [orderId, companyId]
+      );
+      if (orderCheck.rows.length === 0) {
+        return res.status(404).json({ message: 'Order not found or access denied.' });
+      }
     }
 
     // 2. Fetch lines
     const sql = `
-      SELECT line_id AS "id", order_id AS "orderId", fulfillment_status AS "fulfillmentStatus"
+      SELECT line_id AS "id", order_id AS "orderId", fulfillment_status AS "fulfillmentStatus",
+             item_description AS "itemDescription", machine_id AS "machineId"
       FROM app_commercial.order_lines 
       WHERE order_id = $1
     `;
@@ -259,25 +262,18 @@ export const getOrderLines = async (req, res) => {
   }
 };
 
-// POST /api/orders/:id/lines (Already created previously, kept here for completeness)
+// POST /api/orders/:id/lines 
 export const createOrderLine = async (req, res) => {
   const { id: orderId } = req.params;
-  const { fulfillmentStatus } = req.body;
-  const companyId = req.tenant.companyId;
+  const { fulfillmentStatus, itemDescription, machineId } = req.body;
 
   try {
-    const checkRes = await query(
-      `SELECT order_id FROM app_commercial.orders WHERE order_id = $1 AND company_id = $2`, 
-      [orderId, companyId]
-    );
-    if (checkRes.rows.length === 0) return res.status(404).json({ message: 'Order not found.' });
-
     const sql = `
-      INSERT INTO app_commercial.order_lines (order_id, fulfillment_status)
-      VALUES ($1, $2)
-      RETURNING line_id AS "id", order_id AS "orderId", fulfillment_status AS "fulfillmentStatus"
+      INSERT INTO app_commercial.order_lines (order_id, fulfillment_status, item_description, machine_id)
+      VALUES ($1, $2, $3, $4)
+      RETURNING line_id AS "id"
     `;
-    const { rows } = await query(sql, [orderId, fulfillmentStatus]);
+    const { rows } = await query(sql, [orderId, fulfillmentStatus, itemDescription, machineId]);
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('[CREATE Order Line Error]', error);
@@ -289,26 +285,18 @@ export const createOrderLine = async (req, res) => {
 export const updateOrderLine = async (req, res) => {
   const { lineId } = req.params;
   const { fulfillmentStatus } = req.body;
-  const companyId = req.tenant.companyId;
 
   try {
-    // Security check via JOIN with orders to verify tenant ownership
     const sql = `
-      UPDATE app_commercial.order_lines ol
+      UPDATE app_commercial.order_lines
       SET fulfillment_status = $1
-      FROM app_commercial.orders o
-      WHERE ol.order_id = o.order_id 
-        AND ol.line_id = $2 
-        AND o.company_id = $3
-      RETURNING ol.line_id AS "id", ol.fulfillment_status AS "fulfillmentStatus"
+      WHERE line_id = $2 
+      RETURNING line_id AS "id"
     `;
-    const { rows } = await query(sql, [fulfillmentStatus, lineId, companyId]);
+    const { rows } = await query(sql, [fulfillmentStatus, lineId]);
     
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Order line not found or access denied.' });
-    }
-    
-    res.json({ message: 'Order line updated successfully.', data: rows[0] });
+    if (rows.length === 0) return res.status(404).json({ message: 'Order line not found.' });
+    res.json({ message: 'Order line updated successfully.' });
   } catch (error) {
     console.error('[UPDATE Order Line Error]', error);
     res.status(500).json({ message: 'Failed to update order line.' });
@@ -318,24 +306,12 @@ export const updateOrderLine = async (req, res) => {
 // DELETE /api/orders/lines/:lineId
 export const deleteOrderLine = async (req, res) => {
   const { lineId } = req.params;
-  const companyId = req.tenant.companyId;
 
   try {
-    // Security check via JOIN with orders
-    const sql = `
-      DELETE FROM app_commercial.order_lines ol
-      USING app_commercial.orders o
-      WHERE ol.order_id = o.order_id 
-        AND ol.line_id = $1 
-        AND o.company_id = $2
-      RETURNING ol.line_id
-    `;
-    const { rows } = await query(sql, [lineId, companyId]);
+    const sql = `DELETE FROM app_commercial.order_lines WHERE line_id = $1 RETURNING line_id`;
+    const { rows } = await query(sql, [lineId]);
     
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Order line not found or access denied.' });
-    }
-    
+    if (rows.length === 0) return res.status(404).json({ message: 'Order line not found.' });
     res.json({ message: 'Order line deleted successfully.' });
   } catch (error) {
     console.error('[DELETE Order Line Error]', error);

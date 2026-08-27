@@ -10,6 +10,7 @@ export const OrderFulfillmentPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // Decode Token to check permissions
   let isPlatformOwner = false;
   const token = localStorage.getItem('arol_token');
   if (token) {
@@ -33,14 +34,17 @@ export const OrderFulfillmentPage = () => {
     fulfillmentStatus: 'Pending' 
   });
 
+  // 1. Fetch Master Data sequentially (Order first, then Company Machines)
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [orderRes, machinesRes] = await Promise.all([
-        apiClient.get(`/orders/${id}`),
-        apiClient.get('/machines') 
-      ]);
-      setOrder(orderRes.data);
+      // Step A: Fetch the Order first so we know which company it belongs to
+      const orderRes = await apiClient.get(`/orders/${id}`);
+      const orderData = orderRes.data;
+      setOrder(orderData);
+
+      // Step B: Fetch machines specifically for the Order's target company
+      const machinesRes = await apiClient.get(`/machines?companyId=${orderData.companyId}`);
       setMachines(machinesRes.data || []);
     } catch (err) {
       console.error('Failed to load order details', err);
@@ -56,6 +60,8 @@ export const OrderFulfillmentPage = () => {
   // INLINE STATUS UPDATE (Fast UX)
   // ==========================================
   const handleInlineStatusChange = async (lineId, newStatus) => {
+    if (!isPlatformOwner) return; // Extra safety guard
+
     // Optimistic UI update
     setOrder(prev => ({
       ...prev,
@@ -91,7 +97,6 @@ export const OrderFulfillmentPage = () => {
     e.preventDefault();
     try {
       if (selectedLine) {
-        // Assume you have an endpoint that accepts the full object, or adjust as needed
         await apiClient.put(`/orders/lines/${selectedLine.id}`, lineForm);
       } else {
         await apiClient.post(`/orders/${id}/lines`, lineForm);
@@ -137,6 +142,7 @@ export const OrderFulfillmentPage = () => {
     return 'bg-gray-100 text-gray-600 border-gray-200';
   };
 
+  // Base columns visible to everyone
   const lineColumns = [
     {
       key: 'itemDescription',
@@ -155,7 +161,8 @@ export const OrderFulfillmentPage = () => {
     {
       key: 'fulfillmentStatus',
       label: 'Fulfillment Status',
-      render: (_, row) => (
+      // Conditionally render an interactive Select vs a static Badge
+      render: (_, row) => isPlatformOwner ? (
         <select 
           value={row.fulfillmentStatus}
           onChange={(e) => handleInlineStatusChange(row.id, e.target.value)}
@@ -167,19 +174,27 @@ export const OrderFulfillmentPage = () => {
           <option value="In transit" className="bg-white text-gray-900">In transit</option>
           <option value="Installed" className="bg-white text-gray-900">Installed</option>
         </select>
+      ) : (
+        <span className={`inline-flex px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(row.fulfillmentStatus)}`}>
+          {row.fulfillmentStatus}
+        </span>
       )
-    },
-    {
+    }
+  ];
+
+  // Append actions column ONLY for Platform Owners
+  if (isPlatformOwner) {
+    lineColumns.push({
       key: 'actions',
       label: 'Actions',
       render: (_, row) => (
         <div className="flex gap-3">
-          <button onClick={() => openLineModal(row)} className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-tenant-primary)] hover:opacity-80">Edit Details</button>
-          <button onClick={() => handleDeleteLine(row.id)} className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:opacity-80">Remove</button>
+          <button onClick={() => openLineModal(row)} className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-tenant-primary)] hover:opacity-80 transition-opacity">Edit Details</button>
+          <button onClick={() => handleDeleteLine(row.id)} className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:opacity-80 transition-opacity">Remove</button>
         </div>
       )
-    }
-  ];
+    });
+  }
 
   return (
     <div className="p-8 md:p-12 lg:p-16 animate-in fade-in duration-500 flex flex-col h-full min-h-[calc(100vh-64px)]">
@@ -222,9 +237,11 @@ export const OrderFulfillmentPage = () => {
       <div className="flex-1 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <h2 className="text-lg font-semibold text-gray-900">Fulfillment Manifest ({order.lines?.length || 0} Items)</h2>
-          <button onClick={() => openLineModal()} className="px-6 py-2 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase tracking-wider shadow-sm transition-colors">
-            + Add Manual Line
-          </button>
+          {isPlatformOwner && (
+            <button onClick={() => openLineModal()} className="px-6 py-2 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase tracking-wider shadow-sm transition-colors">
+              + Add Manual Line
+            </button>
+          )}
         </div>
         
         <div className="flex-1 overflow-auto">
@@ -233,58 +250,60 @@ export const OrderFulfillmentPage = () => {
       </div>
 
       {/* ========================================== */}
-      {/* MODAL: LINE ITEM FORM */}
+      {/* MODAL (Only Accessible to Platform Owners) */}
       {/* ========================================== */}
-      <BaseModal isOpen={isLineModalOpen} onClose={() => setIsLineModalOpen(false)} title={selectedLine ? "Edit Line Item" : "Add Manual Line Item"}>
-        <form onSubmit={handleSaveLine} className="space-y-6">
-          
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Item Description</label>
-            <textarea 
-              required rows="2" 
-              value={lineForm.itemDescription} 
-              onChange={e => setLineForm({...lineForm, itemDescription: e.target.value})} 
-              className="w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" 
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-6">
+      {isPlatformOwner && isLineModalOpen && (
+        <BaseModal isOpen={true} onClose={() => setIsLineModalOpen(false)} title={selectedLine ? "Edit Line Item" : "Add Manual Line Item"}>
+          <form onSubmit={handleSaveLine} className="space-y-6">
+            
             <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Target Asset</label>
-              <select 
-                value={lineForm.machineId} 
-                onChange={e => setLineForm({...lineForm, machineId: e.target.value})} 
-                className="w-full border-b border-gray-300 py-2 text-sm bg-white focus:outline-none focus:border-[var(--color-tenant-primary)]"
-              >
-                <option value="">-- General Supply / No Asset --</option>
-                {machines.map(m => (
-                  <option key={m.id} value={m.id}>{m.serialNumber} - {m.modelDescription}</option>
-                ))}
-              </select>
+              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Item Description</label>
+              <textarea 
+                required rows="2" 
+                value={lineForm.itemDescription} 
+                onChange={e => setLineForm({...lineForm, itemDescription: e.target.value})} 
+                className="w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" 
+              />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Fulfillment Status</label>
-              <select 
-                required
-                value={lineForm.fulfillmentStatus} 
-                onChange={e => setLineForm({...lineForm, fulfillmentStatus: e.target.value})} 
-                className="w-full border-b border-gray-300 py-2 text-sm bg-white focus:outline-none focus:border-[var(--color-tenant-primary)]"
-              >
-                <option value="Pending">Pending</option>
-                <option value="Manufacturing">Manufacturing</option>
-                <option value="Ready for shipment">Ready for shipment</option>
-                <option value="In transit">In transit</option>
-                <option value="Installed">Installed</option>
-              </select>
+            
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Target Asset</label>
+                <select 
+                  value={lineForm.machineId} 
+                  onChange={e => setLineForm({...lineForm, machineId: e.target.value})} 
+                  className="w-full border-b border-gray-300 py-2 text-sm bg-white focus:outline-none focus:border-[var(--color-tenant-primary)]"
+                >
+                  <option value="">-- General Supply / No Asset --</option>
+                  {machines.map(m => (
+                    <option key={m.id} value={m.id}>{m.serialNumber} - {m.modelDescription}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Fulfillment Status</label>
+                <select 
+                  required
+                  value={lineForm.fulfillmentStatus} 
+                  onChange={e => setLineForm({...lineForm, fulfillmentStatus: e.target.value})} 
+                  className="w-full border-b border-gray-300 py-2 text-sm bg-white focus:outline-none focus:border-[var(--color-tenant-primary)]"
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="Manufacturing">Manufacturing</option>
+                  <option value="Ready for shipment">Ready for shipment</option>
+                  <option value="In transit">In transit</option>
+                  <option value="Installed">Installed</option>
+                </select>
+              </div>
             </div>
-          </div>
-          
-          <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
-            <button type="button" onClick={() => setIsLineModalOpen(false)} className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
-            <button type="submit" className="px-5 py-2.5 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase">Save Item</button>
-          </div>
-        </form>
-      </BaseModal>
+            
+            <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
+              <button type="button" onClick={() => setIsLineModalOpen(false)} className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
+              <button type="submit" className="px-5 py-2.5 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase">Save Item</button>
+            </div>
+          </form>
+        </BaseModal>
+      )}
 
     </div>
   );

@@ -167,15 +167,23 @@ export const QuotesPage = () => {
         </div>
       )
     },
-    // Conditionally inject the Company column
     ...(isPlatformOwner ? [{
       key: 'company',
       label: 'Client Company',
       render: (_, row) => {
-        const company = options.companies.find(c => c.id === row.companyId);
+        // 1. Safely match the ID regardless of backend casing
+        const company = options.companies.find(c => 
+          (c.id || c.company_id) === row.companyId
+        );
+        
+        // 2. Safely extract the name regardless of backend casing
+        const displayName = company 
+          ? (company.name || company.companyName || company.company_name || 'Unnamed Company') 
+          : (row.companyId || 'Unknown');
+
         return (
           <span className="font-semibold text-[var(--color-tenant-primary)] text-sm block">
-            {company ? company.name : (row.companyId || 'Unknown')}
+            {displayName}
           </span>
         );
       }
