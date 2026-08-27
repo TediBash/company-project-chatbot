@@ -22,7 +22,7 @@ class ShortTermMemoryProvider:
         self.limit = limit
 
     async def get_messages(self, session_id: str, company_id: str) -> List[Dict[str, str]]:
-        """Returns the last N messages in standard role/content dictionary format."""
+        """Returns the last N messages in standard role/content dictionary format (oldest to newest)."""
         async with db.tenant_connection(company_id) as conn:
             rows = await conn.fetch(
                 """
@@ -37,6 +37,22 @@ class ShortTermMemoryProvider:
             )
 
         # Reverse rows so they are in chronological order (oldest to newest)
+        return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
+
+    async def get_full_history(self, session_id: str, company_id: str, limit: int = 50) -> List[Dict[str, str]]:
+        """Returns an extended chronological history for context-aware routing and analysis."""
+        async with db.tenant_connection(company_id) as conn:
+            rows = await conn.fetch(
+                """
+                SELECT role, content
+                FROM app_chat.chat_messages
+                WHERE session_id = $1 AND role IN ('user', 'assistant')
+                ORDER BY created_at DESC
+                LIMIT $2
+                """,
+                session_id,
+                limit,
+            )
         return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
 
 
@@ -93,7 +109,7 @@ class RoadmapMemoryProvider:
             active_step = steps[active_step_idx]
             status = active_step.get("status", "pending").upper()
             task = active_step.get("task", "")
-            notes = active_step.get("notes", "") # Pulling contextual blocker notes
+            notes = active_step.get("notes", "")
 
             lines.append(f"\n>> CURRENT ACTIVE STEP (Step {active_step_idx + 1}): [{status}] {task}")
             if notes:
@@ -122,7 +138,6 @@ class LongTermMemoryProvider:
     """Fetches highly relevant historical facts across all sessions for a user/company."""
 
     def __init__(self):
-        # Reusing the ChromaDB setup for semantic fact retrieval
         self.vector_store = VectorStoreManager(collection_name="user_long_term_memory")
 
     def get_relevant_facts(self, company_id: str, query: str, top_k: int = 3) -> str:
@@ -142,7 +157,26 @@ class LongTermMemoryProvider:
 
 
 # ============================================================================
-# 4. INDEPENDENT OBJECT: Token Optimizer & Trimmer
+# 4. INDEPENDENT OBJECT: Session State & Variable Pinning Cache
+# ============================================================================
+class SessionStateProvider:
+    """Manages ephemeral session-pinned variables (e.g., pinned RAG chunks for step-by-step flows)."""
+    
+    def __init__(self):
+        # In-memory store keyed by session_id -> {key: value}
+        self._store: Dict[str, Dict[str, Any]] = {}
+
+    def set_variable(self, session_id: str, key: str, value: Any) -> None:
+        if session_id not in self._store:
+            self._store[session_id] = {}
+        self._store[session_id][key] = value
+
+    def get_variable(self, session_id: str, key: str, default: Any = None) -> Any:
+        return self._store.get(session_id, {}).get(key, default)
+
+
+# ============================================================================
+# 5. INDEPENDENT OBJECT: Token Optimizer & Trimmer
 # ============================================================================
 class TokenOptimizer:
     """Calculates token counts and trims message history to respect budgets."""
@@ -167,7 +201,6 @@ class TokenOptimizer:
         if not messages:
             return []
 
-        # 1. Context Anchoring: Pin the very first user message to prevent amnesia
         anchor = None
         if len(messages) > 0 and messages[0]["role"] == "user":
             anchor = messages[0]
@@ -183,7 +216,6 @@ class TokenOptimizer:
             if current_tokens <= max_token_budget:
                 break
                 
-            # 2. Prune the oldest message from the *working list* (the middle of the chat)
             working_list.pop(0)
 
         if anchor:
@@ -192,7 +224,7 @@ class TokenOptimizer:
 
 
 # ============================================================================
-# 5. ORCHESTRATOR: Memory Pipeline Manager
+# 6. ORCHESTRATOR: Memory Pipeline Manager
 # ============================================================================
 class MemoryPipelineManager:
     """Coordinates individual memory objects based on active configuration flags."""
@@ -201,7 +233,20 @@ class MemoryPipelineManager:
         self.short_term = ShortTermMemoryProvider(limit=active_pipeline.memory.max_history_messages)
         self.roadmap = RoadmapMemoryProvider()
         self.long_term = LongTermMemoryProvider()
+        self.session_state = SessionStateProvider()
         self.optimizer = TokenOptimizer()
+
+    async def get_chat_history(self, session_id: str, company_id: str, limit: int = 30) -> List[Dict[str, str]]:
+        """Exposes full/extended chat history retrieval for intent routing and context evaluation."""
+        return await self.short_term.get_full_history(session_id, company_id, limit)
+
+    async def save_session_variable(self, session_id: str, key: str, value: Any) -> None:
+        """Saves a temporary session-pinned state variable (e.g. pinned RAG context)."""
+        self.session_state.set_variable(session_id, key, value)
+
+    async def get_session_variable(self, session_id: str, key: str, default: Any = None) -> Any:
+        """Retrieves a temporary session-pinned state variable."""
+        return self.session_state.get_variable(session_id, key, default)
 
     async def assemble_context(
         self, session_id: str, company_id: str, base_system_prompt: str, user_query: str = ""
@@ -229,7 +274,6 @@ class MemoryPipelineManager:
         # 3. Short-Term History (if enabled)
         if active_pipeline.memory.short_term_enabled:
             raw_messages = await self.short_term.get_messages(session_id, company_id)
-            # Apply token budget trimming
             messages = self.optimizer.trim_history(
                 raw_messages, max_token_budget=active_pipeline.budget.max_tokens_per_answer // 2
             )

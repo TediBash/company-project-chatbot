@@ -25,6 +25,7 @@ class IntentRouter:
         active_machine_name: str,
         active_serial_number: str,
         system_date: str,
+        last_agent_message: str = "",
         tracer: Any = None
     ) -> Literal["technical", "commercial", "operational", "general", "out_of_scope_machine"]:
         
@@ -33,7 +34,8 @@ class IntentRouter:
             "user_role": user_role,
             "active_machine_name": active_machine_name,
             "active_serial_number": active_serial_number,
-            "system_date": system_date
+            "system_date": system_date,
+            "last_agent_message": last_agent_message
         }
         prompt = prompt_registry.render(name="router", variables=variables)
 

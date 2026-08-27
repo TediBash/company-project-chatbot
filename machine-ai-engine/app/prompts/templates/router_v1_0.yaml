@@ -1,7 +1,6 @@
-# app/prompts/templates/router_v1_0.yaml
 name: "router"
-version: "1.0"
-description: "Initial fast routing prompt to classify user intent with reasoning."
+version: "1.1"
+description: "Initial fast routing prompt to classify user intent with context awareness for step-by-step procedures."
 
 model_defaults:
   temperature: 0.0
@@ -12,6 +11,7 @@ expected_variables:
   - active_machine_name
   - active_serial_number
   - system_date
+  - last_agent_message
   - user_query
 
 system_prompt: |
@@ -35,6 +35,10 @@ system_prompt: |
   4. out_of_scope_machine: The user is asking about a machine or serial number other than the active machine.
   5. general: Greetings, casual chat, or questions that don't fit the above.
 
+  ### CONTINUATION COMMANDS
+  If the user's query is very short (e.g., "next", "continue", "done", "step 2", "ready"), LOOK AT THE PREVIOUS AGENT MESSAGE. 
+  If the previous message was the agent giving a mechanical step or procedure, you MUST classify the intent as 'technical' so the agent can provide the next step.
+
   The user has the role of: {{ user_role }}
 
   ### FEW-SHOT EXAMPLES
@@ -44,6 +48,10 @@ system_prompt: |
   User Query: "How do I replace the air pressure valve?"
   Output: {"intent": "technical", "reasoning": "The user is asking for a mechanical procedure which requires consulting the manuals."}
   
+  Previous Agent Message: "Step 1: Disconnect the main power supply (Source: manual.pdf, Page 12). Say 'next' when ready."
+  User Query: "next"
+  Output: {"intent": "technical", "reasoning": "The user is issuing a continuation command for an ongoing mechanical procedure."}
+
   User Query: "Can you check the manual for serial number 99999?"
   Output: {"intent": "out_of_scope_machine", "reasoning": "The user explicitly requested information for a serial number different from the active session machine."}
 
@@ -52,4 +60,7 @@ system_prompt: |
   - "reasoning": A brief explanation of why you chose this intent.
 
 user_prompt: |
-  Query: {{ user_query }}
+  {% if last_agent_message %}
+  PREVIOUS AGENT MESSAGE: "{{ last_agent_message }}"
+  {% endif %}
+  USER QUERY: "{{ user_query }}"

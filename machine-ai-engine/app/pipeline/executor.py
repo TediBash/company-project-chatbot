@@ -59,12 +59,25 @@ class CognitiveLoopExecutor:
                 raw_serial = getattr(self, "active_serial_number", "")
                 active_serial = raw_serial if raw_serial and raw_serial != getattr(self, "active_machine_id", "") else "Unknown SN"
                 
+                last_agent_msg = ""
+                try:
+                    # Retrieve history (adapt this to your exact memory_manager method)
+                    history = await self.memory_manager.get_chat_history(self.session_id, self.company_id)
+                    # Find the last message where role == 'assistant'
+                    for msg in reversed(history):
+                        if msg.get("role") == "assistant":
+                            last_agent_msg = msg.get("content", "")
+                            break
+                except Exception as e:
+                    print(f"Could not fetch history for router: {e}")
+                
                 target_agent_name = await self.router.route(
                     query=user_query,
                     user_role=user_role,
                     active_machine_name=active_machine_name,
                     active_serial_number=active_serial,
                     system_date="2026-08-05",
+                    last_agent_message=last_agent_msg,
                     tracer=tracer
                 )
                 yield {"type": "status", "payload": f"Routed to {target_agent_name.capitalize()} Agent."}
@@ -136,19 +149,36 @@ class CognitiveLoopExecutor:
                 active_machine = getattr(self, "active_machine_id", "unknown")
                 tracer.machine_id = active_machine
                 
-                rag_docs = self.rag_provider.retrieve_context(
-                    query_text=user_query, 
-                    serial_number=active_serial
-                )
+                short_query = len(user_query.split()) <= 4
+                is_continuation = short_query and any(word in user_query.lower() for word in ["next", "continue", "done", "yes", "ready", "step"])
+                
+                rag_docs = []
+                
+                if not is_continuation:
+                    rag_docs = self.rag_provider.retrieve_context(
+                        query_text=user_query, 
+                        serial_number=active_serial
+                    )
                 
                 if rag_docs:
-                    context["rag_blocks"] = self.rag_provider.format_system_prompt_block(rag_docs)
+                    new_rag_block = self.rag_provider.format_system_prompt_block(rag_docs)
+                    context["rag_blocks"] = new_rag_block
+                    
+                    await self.memory_manager.save_session_variable(self.session_id, "pinned_rag_context", new_rag_block)
                 else:
-                    context["rag_blocks"] = "No manual excerpts required for this general query."
+                    # No new context (e.g., user just said "next"): Try to load the pinned context
+                    pinned_rag = await self.memory_manager.get_session_variable(self.session_id, "pinned_rag_context")
+                    
+                    if pinned_rag:
+                        context["rag_blocks"] = pinned_rag
+                    else:
+                        context["rag_blocks"] = "No manual excerpts required for this general query."
+                
                     
                 tracer.add_step("RAG Retrieval", "vector_search", {
                     "serial_number": active_serial,
-                    "docs_retrieved": len(rag_docs)
+                    "docs_retrieved": len(rag_docs),
+                    "used_pinned_context": bool(not rag_docs and pinned_rag)
                 })
 
 
@@ -182,7 +212,7 @@ class CognitiveLoopExecutor:
                     response=draft_text
                 )
                     
-                if not active_pipeline.control.validate_response_enabled:
+                if not active_pipeline.control.validate_response_enabled or target_agent_name == "general":
                     final_draft_text = draft_text
                     break
 
