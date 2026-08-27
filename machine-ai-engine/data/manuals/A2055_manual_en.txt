@@ -1,0 +1,2047 @@
+SINGLEHEAD AUTOMATIC TURRET
+Model EAGLE VA TURRET
+Serial number A2055
+Manufacturing year 2007 
+Update A 02---07
+CLOSYS S.r.l.-- 14053 CANELLI (AT)-- ITALY
+
+Here is the table of contents presented in the manual:
+
+## Table of Contents
+
+* **Technical Data of the Machine** — Page 1
+* **Closure Process and Proper Use** — Page 3
+* **General Information** — Page 5
+* **1. Manufacturer Declaration** — Page 5
+* **2. Machine Identification** — Page 5
+* **3. Foreword** — Page 6
+* **4. Keeping This Use Instruction Manual** — Page 7
+* **5. Reproduction Restriction, Responsibility and Copyright** — Page 7
+* **6. Revisions** — Page 7
+* **7. Characteristics of the Operators** — Page 8
+* **8. Customer's Obligations** — Page 8
+* **8.1. Information** — Page 9
+* **8.2. Job Instructions** — Page 10
+* **8.3. Training** — Page 10
+
+
+* **9. Measures by the Customer** — Page 10
+* **10. How to Ask for Interventions** — Page 11
+* **11. How to Order Spare Parts** — Page 11
+* **12. Warranty and Final Test** — Page 12
+* **13. Norms–Certifications–Use Restrictions** — Page 13
+* **13.1. Reference Technical Norms** — Page 13
+* **13.2. Explosive Atmosphere** — Page 13
+* **13.3. Lighting** — Page 13
+* **13.4. Vibrations** — Page 13
+
+
+* **14. Precautions for the Operators' Safety** — Page 14
+
+Here is the continuation of the table of contents from page ii:
+
+* **15. Safety Norms for the Operation** — Page 14
+* **16. Safety Norms for the Maintenance** — Page 15
+* **16.1. Maintenance Preparation** — Page 15
+* **16.2. General Safety Warnings** — Page 15
+* **16.3. Warnings for a Correct Maintenance** — Page 16
+
+
+* **17. Machine Cleaning** — Page 16
+* **18. Safety Checks** — Page 16
+* **18.1. At the End of the Maintenance Interventions, Before Starting the Machine Up** — Page 16
+
+
+* **Scrapping and Disposing** — Page 17
+* **Unload and Installation of the Turret** — Page 19
+* **1. Unload from the Mean of Transport** — Page 19
+* **2. Laying the Turret** — Page 19
+* **2.1. Removal of the Components of the Turret from the Transfer Baseframe** — Page 19
+* **2.2. Assembling of the Turret on the Monoblock** — Page 23
+
+
+* **3. Electric Connection** — Page 27
+* **3.1. Rotation Direction Check** — Page 27
+
+
+* **4. Components Installation** — Page 27
+* **5. Pneumatic Connection** — Page 28
+
+
+* **First Start Up, Operating and Use** — Page 29
+* **1. Setting Up, Checks and Test for the First Start Up** — Page 29
+* **1.1. Checks Before the Start Up** — Page 29
+
+
+* **2. Operation** — Page 30
+* **3. Preliminary Checks** — Page 30
+* **4. Height Adjustment of the Turret** — Page 31
+* **5. Use of the Turret** — Page 32
+* **5.1. Head Rotation Speed Adjustment** — Page 32
+* **5.2. Disconnection from the Work Cycle** — Page 32
+
+Here is the continuation of the table of contents from page iii:
+
+## Table of Contents (Continued) (Page iii)
+
+* **F. Maintenance** — Page 33
+* **1. Periodical Checks and Maintenance** — Page 33
+* **2. Maintenance Intervention** — Page 34
+* **3. Maintenance and Lubrication Planning** — Page 34
+* **4. Planned Maintenance** — Page 35
+* **5. Maintenance–Timing** — Page 39
+* **5.1. Transfer Equipment Timing** — Page 39
+* **5.1.1. Star–Wheel Timing** — Page 39
+
+
+
+
+* **G. Lubrication** — Page 41
+* **1. General Information** — Page 41
+* **2. Lubricants Homologation According to USDA** — Page 41
+* **3. Lubricant Types** — Page 42
+* **3.1. Features of the Used Lubricants** — Page 43
+* **3.2. Lubricant Re–Ordering** — Page 44
+
+
+* **4. Key to the Lubrication Schemes** — Page 44
+* **5. Points to be Lubricated** — Page 44
+* **6. Lubrication of the Variable–Speed Drive** — Page 49
+* **6.1. Introduction** — Page 49
+* **6.2. Lubrication** — Page 50
+* **6.3. Oil Replacement for V1.....V5.5** — Page 54
+
+
+* **7. Reducer Lubrication** — Page 55
+* **7.1. Introduction** — Page 55
+* **7.2. Lubrication** — Page 55
+* **7.3. Oil Replacement for VF130....VF150 and W110** — Page 56
+
+
+
+
+* **H. Format Change** — Page 57
+* **1. Premise** — Page 57
+* **2. Containers Format Change** — Page 57
+* **3. Cap Format Change** — Page 57
+
+Here is the continuation of the table of contents from page iv:
+
+## Table of Contents (Continued) (Page iv)
+
+* **I. Installation and Removal of the Bottles Transfer Equipment** — Page 59
+* **1. Conveyor** — Page 59
+* **1.1. Removal** — Page 59
+* **1.2. Installation** — Page 59
+
+
+* **2. Star–Wheel** — Page 59
+* **2.1. Removal** — Page 59
+* **2.2. Installation** — Page 59
+
+
+
+
+* **J. Components on the Machine** — Page 61
+* **1. Threading Head** — Page 62
+* **1.1. Tools Needed for Dismounting and Maintenance** — Page 62
+* **1.2. Threading Head Replacement/Removal** — Page 63
+* **1.2.1. Removal** — Page 63
+* **1.2.2. Mounting** — Page 63
+
+
+* **1.3. Head Adjustment** — Page 64
+* **1.3.1. Head Preparation** — Page 64
+* **1.3.2. Threading Roller Adjustment** — Page 65
+* **1.3.3. Threading Roller Lateral Load Adjustment** — Page 67
+* **1.3.4. Seaming Roller Adjustment** — Page 68
+* **1.3.5. Seaming Roller Lateral Load Adjustment** — Page 70
+
+
+* **1.4. Mouthpresser Replacement** — Page 71
+* **1.5. Spring Replacement** — Page 73
+* **1.5.1. Threading Roller Springs** — Page 73
+* **1.5.2. Seaming Roller Spring** — Page 74
+* **1.5.3. Arm Return Spring** — Page 75
+* **1.5.4. Lateral Load Springs** — Page 75
+* **1.5.5. Compensation Spring** — Page 75
+
+
+* **1.6. Head Cleaning** — Page 75
+* **1.7. Head Component Lubrication** — Page 76
+* **1.7.1. Every 8 Hours** — Page 76
+
+Here is the continuation of the table of contents from page v:
+
+* **1.7.2. Every 120 Hours** — Page 76
+* **2. Centrifugal Orientator** — Page 77
+* **2.1. Installation of the Orientator** — Page 77
+* **2.2. Orientator Loading** — Page 80
+* **2.3. Orientator Emptying** — Page 80
+* **2.4. Caps Format Change** — Page 81
+* **2.5. Adjustment of the Orientator** — Page 83
+* **2.6. Maintenance of the Orientator** — Page 83
+
+
+* **3. Caps Chute** — Page 85
+* **3.1. Caps Chute Installation** — Page 85
+* **3.2. Discharge of the Caps Chute** — Page 86
+* **3.3. Caps Format Change** — Page 86
+
+
+* **K. Problems and Solutions** — Page 87
+* **1. Introduction** — Page 87
+
+
+
+
+## TECHNICAL DATA OF THE MACHINE (Page 1)
+
+* **Model:** EAGLE VA TURRET
+* **Serial number:** A2055
+* **Rotation:** CLOCKWISE
+* **Manufacturing year:** 2007
+
+### a. Weight
+
+* **Weight of the machine:** 500 kg
+
+### b. Production capacity
+
+* **Pieces/hour:** 3.000
+
+### c. Type of closure
+
+* **Type of bottle:** glass 500 ml.
+* **Type of cap:** Aluminium screw cap
+
+
+## TECHNICAL DATA OF THE MACHINE (CONTINUED) (Page 2)
+
+### d. Electrical data
+
+* **Feeding voltage:**
+* **Main:** 380 V, 50 Hz
+* **Auxiliary:** 24 V, 50 Hz
+
+
+* **Installed power:**
+* **Head rotation motor:** 0.37 kW
+* **Caps sorter motor:** 0.37 kW
+
+
+* **Installed total power:** 0.74 kW
+* **Maximum absorption:** 2.00 A
+
+### e. Air data
+
+* **Sterile air capacity:** 400 ≈ Nl/min
+* **Sterile air minimum pressure:** 6 bar
+* **Sterile air maximum pressure:** 8 bar
+
+
+## CLOSURE PROCESS AND PROPER USE (Page 3)
+
+* **Proper Use**: Use the machine exclusively following the instructions contained in this manual. Any other non-mentioned use must be considered "improper use".
+* **Machine Function**: The EAGLE VA turret is able to apply aluminium caps to thread.
+* **Application Specifications**: This model applies caps on bottles as described in the table at page 1, point "c".
+* **Cap Feeding Flow**: Caps arriving from the caps sorter (**A**) are driven by the caps chute (**B**) until the distribution head (**C**).
+* **Pick-off Mechanism**: A cap placed at about 45° is taken with a system called "pick off" by the bottle that is coming during rotation.
+* **Transfer and Positioning**: The star-wheel rotation (**D**) transfers bottles under the capping head (**E**) where the closure of the cap on the bottle takes place.
+* **Threading and Seaming Action**: The capping head, following the profile of a cam, will thread and seam the cap on the bottle by the rotation of threader and seamer rollers.
+* **Cycle Completion**: After the closure, there is the detachment from the bottle and the rearmament for the following closure.
+
+*(Fig. 1, Fig. 2, Fig. 3, Page 3)*
+
+## B. GENERAL INFORMATION (Page 5)
+
+### 1. MANUFACTURER DECLARATION
+
+* The original of the MANUFACTURER DECLARATION is delivered together with the machine documents.
+* It must be kept until the machine is scrapped.
+
+---
+
+### 2. MACHINE IDENTIFICATION
+
+* The machine is identified by the CE marking according to the specifications of the European Directive 98/37/EC (see par. page 13).
+* One identification plate is located on the machine rear side, on the base.
+* Another identification plate is located on the upper side of the turret.
+* When ordering spare parts or contacting the manufacturer for communications or information requests, you must always indicate:
+* Machine model (**MODEL**)
+* Machine serial number (**SERIAL N.**)
+* Manufacturing year (**YEAR**)
+
+
+
+*(Fig. 4, Page 5)*
+
+
+## 3. FOREWORD (Page 6)
+
+This manual is addressed to operators and specialized staff to enable correct machine use. It provides instructions and indications for:
+
+* A correct machine installation.
+* A functional description of the machine and of each component, including accident-preventing safety norms.
+* Adjustments on the machine while setting and starting it up.
+* A correct scheduled and routine maintenance.
+
+### Definitions of Terms
+
+* **OPERATOR**: A person charged with machine operation, adjustment, routine maintenance, and cleaning.
+* **QUALIFIED TECHNICIAN**: A specialized person, suitably trained and authorized for installation, extraordinary maintenance, or repair interventions requiring special machine knowledge.
+* **EMPLOYER (OR CUSTOMER)**: The person legally responsible for machine use.
+
+### Graphic Symbols
+
+* **Wrench Symbol**: Manual section reserved to the *qualified technician*.
+* **Triangle Warning Symbol**: Pay attention to the accident-preventing norms.
+* **Circle Exclamation Symbol**: Possibility of damaging the machine and/or its components.
+* **Eye Symbol**: Special note.
+
+### Important Operational Warnings
+
+* Before any operation with or on the machine, read the procedures and warnings herein carefully.
+* Some figures in this manual are approximate and may differ in aspect from the machine described.
+* These differences represent machine components that can be positioned differently depending on the version, but that can be easily recognized.
+* The reported instructions and use modes for all described components anyway remain valid.
+
+
+The operator can thus know the machine features and operation.
+The used terms and symbols are specified here below to understand the manual fully:
+OPERATOR - person charged with the machine operation, adjustment, routine maintenance and cleaning.
+QUALIFIED TECHNICIAN - specialized person, suitably trained and authorized for installation, extraordinary maintenance or repair inter ventions requiring a special machine knowledge.
+EMPLOYER (OR CUSTOMER) - person legally responsible for the machine use.
+
+## 4. KEEPING THIS USE INSTRUCTION MANUAL (Page 7)
+
+To keep the "Manual" correctly, it is recommended to:
+
+* Keep the manual in the room where the machine operates and in areas protected against humidity, so as not to jeopardize its life in time.
+* Use the manual without damaging it.
+* Not to remove, add, modify, or edit any part of the document; possible updates shall be made exclusively by CLOSYS S.r.l.
+* Give the manual to any subsequent owner of the machine.
+
+---
+
+## 5. REPRODUCTION RESTRICTION, RESPONSIBILITY AND COPYRIGHT (Page 7)
+
+* Copyright is held by CLOSYS S.r.l.
+* The reproduction of this manual is allowed only for the training and information purposes of staff charged with machine use.
+* No reproduction is allowed for other purposes without explicit authorization by CLOSYS S.r.l.
+* As CLOSYS S.r.l. is steadily involved in the improvement of its products, the information in this manual may be changed without notice.
+* Utmost care was used while preparing this manual, but CLOSYS S.r.l. does not undertake any responsibility for errors or omissions, and no responsibility is taken for damages resulting from the use of the information herein.
+
+---
+
+## 6. REVISIONS (Page 7)
+
+* The manufacturer engages to issue future revisions of the manual following modifications to the machine.
+
+
+
+## 7. CHARACTERISTICS OF THE OPERATORS
+
+To understand the instructions (text and figures) the machine operators must have (or get, though a suitable training and education) at least the following characteristics:
+
+* sufficient general and technical knowledge to read and understand the manual content in the sections concerning them and to interpret drawings and schemes correctly;
+* capacity of understanding and interpreting symbols and pictograms;
+* knowledge of the main accident-preventing and hygienic norms;
+* global knowledge of the machine and of the environment where the machine is installed;
+* capacity of behaving correctly in case of machine emergency situations.
+
+The qualified technicians, besides the above characteristics, must also have a good technical preparation and/or a suitable working experience in the relevant field. Further, they must have specific and special (mechanical and electrical) technical knowledge needed for the operations described in this manual.
+
+---
+
+## 8. CUSTOMER'S OBLIGATIONS
+
+The customer shall suitably train and inform the operators on the following topics concerning safety while using the machine:
+
+* specific instructions for the machine use and maintenance.
+* general accident-preventing norms, or norms specified by international directives and by laws of the machine destination country.
+
+After the training, the customer must ensure the qualified technicians and operators have understood the above points, and must make them sign the "Performed training sheet" enclosed herewith.
+
+These qualified technicians and operators only can work on the machine.
+
+The customer, or a persons charged by him, shall deliver the P.P.M. (Personal Protection Means) required for all operations on the machine needing them (maintenance, cleaning, etc.).
+
+## 8.1. INFORMATION
+
+The following requirements are taken from the European Directive 89/391/EEC and following modifications on the improvement of the workers' safety and health in the working environment.
+
+### General information
+
+The customer must inform the worker on:
+
+1. risks for safety and health connected with the company activity in general;
+2. used protection and prevention measures and activities;
+3. specific risks he is exposed to depending on the performed activity, safety norms and company arrangements on this matter;
+4. hazards connected with the use of dangerous substances and compounds on the basis of the safety data sheets specified by the norms in force and by the good practice norms.
+
+### Use of the work equipment
+
+1. The customer arranges for the charged workers to have all information and use instructions needed for safety reasons for each work equipment they use and concerning:
+* the equipment use conditions also on the basis of the conclusions from previous use experiences on the work equipment;
+* expectable unusual situations.
+
+
+2. The use instructions and information must be easily understandable by the concerned workers.
+
+### P.P.M. use
+
+The customer:
+
+* gives understandable instructions to the workers.
+* preliminarily informs the worker on the risks he is protected from through the P.P.M.
+
+## 8.2. JOB INSTRUCTIONS
+
+### General information
+
+1. The customer ensures every worker receives suitable and sufficient job instructions on safety and health, with special reference to his working station and tasks.
+2. The training must be performed:
+* when the worker is employed;
+* whenever he is moved or his tasks are changed;
+* when new work equipment or new technologies are adopted, as well as new hazardous substances and compounds are used.
+
+
+3. Training must be periodically repeated according to the risk evolution, namely when new risks show up.
+
+### Use of the work equipment
+
+The customer makes sure that:
+
+* the workers charged with the use of work equipment receive a suitable training accordingly;
+* the workers charged with the use of equipment requiring special knowledge and responsibility receive a suitable and specific training, so that they can use such equipment safely and suitably, also as far as risks caused to other people are concerned.
+
+### P.P.M. use
+
+The customer:
+
+* ensures a suitable training and arranges, if necessary, a special training on the correct and practical use of the P.P.M.
+
+---
+
+## 8.3. TRAINING
+
+Training is the activity aimed at understanding the correct machine use, thus complying with the obligations described in the previously mentioned European Directive.
+
+---
+
+## 9. MEASURES BY THE CUSTOMER
+
+Excluding special contract conditions, the customer must arrange the following:
+
+* pneumatic supply
+* generic tools for the machine maintenance and consumables
+* lifting means suitable for the machine handling
+
+## 10. HOW TO ASK FOR INTERVENTIONS
+
+CLOSYS S.r.l. puts its own Technical Service at the disposal of its customers to solve any problem regarding the machine use and maintenance.
+
+The interventions must be required after carefully evaluating the faults and their reasons, and stating:
+
+* the details on the occurred faults;
+* the performed checks;
+* the performed adjustments and resulting effects;
+* any further information deemed useful.
+
+The requests for interventions by the Customer Technical Service must be forwarded to the following address:
+
+* CLOSYS S.r.l.
+* Via P. Testore, no 84/86 – 14053 CANELLI (Asti) ITALY
+* Phone: +39 0141 822062
+* Fax: +39 0141 824380
+* Web site: [http://www.closys.it](http://www.closys.it)
+
+---
+
+## 11. HOW TO ORDER SPARE PARTS
+
+All orders for spare parts must be sent to CLOSYS S.r.l.
+
+The warranty is cancelled if non–genuine spare parts are installed.
+
+To order spare parts, fill in the suitable form in the "SPARE PART CATALOGUE" for the machine.
+
+**Spare part replacement must be carried out by specialized technicians following the procedures and using ALL SAFETY PRECAUTIONS described in the chapters "Maintenance" and "Safety".**
+
+## 12. WARRANTY AND FINAL TEST
+
+The machine is delivered to the customer ready to be installed, after having passed all tests arranged by the manufacturer at the factory, according to the laws in force.
+
+During the warranty, the manufacturer engages to eliminate possible faults or defects provided that the machine has been used correctly, in compliance with the instructions of the use and maintenance manuals.
+
+For everything not specifically indicated in this manual, refer to the "GENERAL SALES CONDITIONS point 8 WARRANTY – LIABILITY RESTRICTIONS:"
+
+CLOSYS S.r.l. shall not be liable for inconveniences, breakage, accidents, etc., due to the non–knowledge (or anyway to the failed application) of the specifications herein. The same applies to changes, modifications and/or installation of non–genuine accessories or spare parts without previous authorization.
+
+In particular, CLOSYS S.r.l. declines all liabilities for damage due to:
+
+* acts of God;
+* wrong maneuvers;
+* failed maintenance;
+* damage of the electric or electronic components due to condensate or contact with outer conductors.
+
+CLOSYS S.r.l. further declines all liabilities resulting from an incorrect or improper machine use.
+
+The warranty shall be cancelled if machine components are modified or replaced, or if the software of programmable components is varied, without previous authorization by the manufacturer.
+
+## 13. NORMS–CERTIFICATIONS–USE RESTRICTIONS
+
+### 13.1. REFERENCE TECHNICAL NORMS
+
+The following norms have been referred to while designing and manufacturing the machine:
+
+* **EC Directive**
+* Directive 98/37 EC.
+* Directive 89/391 EEC and following modifications and additions acknowledged up to today.
+* Directive 73/23 EEC.
+* Directive 89/336 EEC.
+
+### 13.2. EXPLOSIVE ATMOSPHERE
+
+The machine is not suitable for being used in premises where atmospheres with explosion risk are expected or expectable. The customer must not use the machine in explosive or partially explosive atmosphere.
+
+### 13.3. LIGHTING
+
+The machine does not feature a own lighting, as it is expected to operate in standard lighted premises.
+
+### 13.4. VIBRATIONS
+
+The machine complies with the limits set by the Directive 2002/44/EC.
+
+## 14. PRECAUTIONS FOR THE OPERATORS’ SAFETY
+
+When glass container parts must be removed from the machine it is necessary: to turn the main switch off, to wear protective gloves with a min. cutting protection 2 and to remove each foreign matter using a small broom and a dustpan.
+
+To install, maintain or change size, sometimes it is necessary to change the cap/cork guide or the delivery chute. Due to the weight of these components and to their positioning in the machine upper part, this operation must be carried out with the machine off, using suitable lifting systems.
+
+---
+
+## 15. SAFETY NORMS FOR THE OPERATION
+
+* Wrenches and tools used for the maintenance or the access to machine hazardous sections must not be left at the disposal of operators not suitably trained for the size change or the maintenance.
+* All check, adjustment, maintenance and lubrication steps must be carried out by staff previously trained and instructed.
+* All check, adjustment and maintenance steps of the electric system must be carried out by staff previously trained and instructed.
+* People on drugs, alcohol or drowsiness–causing medicines are not allowed to use or maintain the machine.
+* All check, adjustment, maintenance and lubrication steps must be carried out with the **MACHINE STOPPED and DISCONNECTED POWER**.
+* The cap/cork feeding system has been designed and manufactured to be loaded by an automatic elevator with ground loading.
+* If caps/corks are loaded manually, this operation must be performed with the machine off.
+* For interventions in the machine upper part, with **MACHINE STOPPED and DISCONNECTED POWER**, exclusively use climbing means (ladders, scaffolds) equipped with guards and according to the laws in force. Do not carry out any intervention climbing on the machine structure or parts.
+
+## 16. SAFETY NORMS FOR THE MAINTENANCE
+
+### 16.1. MAINTENANCE PREPARATION
+
+**BEFORE ALL MAINTENANCE OPERATIONS, the machine must be set in safety conditions to prevent danger of unexpected starts and/or electrocution.**
+
+* A sign "Maintenance in progress" must be placed on the control board.
+* The section under maintenance must be fenced off to prevent unauthorized persons from accessing and must be signalled by plates: "Danger! Maintenance in progress".
+* After the maintenance works and before starting the machine again it is always necessary:
+* to check that the possibly replaced parts and/or used tools have been removed from the machine;
+* to check that all guards, protections and safety devices possibly removed during the intervention have been re–installed correctly and are operating.
+
+
+
+*The standard operating conditions will be restored only after the intervention and the checks.*
+
+### 16.2. GENERAL SAFETY WARNINGS
+
+The safety for the machine and the operators also depends on a regular maintenance according to the manufacturer’s indications.
+
+The routine and extraordinary maintenance interventions must be exclusively charged to skilled staff, that is to technicians qualified according to the specifications in the manual introduction.
+
+If outsourced operators intervene, they must ensure the same performance of the inhouse qualified technicians and must work in safe operating conditions.
+
+The qualified technicians must:
+
+* respects the limits of their tasks (mechanical, electrical, etc.);
+* follow the procedures and warnings in the manual, within their tasks;
+* follow the times and intervals indicated in the manual for scheduled maintenance interventions.
+
+The following general warnings must be noted:
+
+* Electrocution hazard due to direct contact with the machine power supply terminal boards and in the electrical system connector blocks (the hazard is signalled by plates with the suitable triangle with yellow bottom).
+* Be extremely careful during the interventions on the electrical system, if the system must be left live. Such interventions must be carried out by staff skilled in this type of maintenance only, trained and correctly equipped for the steps to be made. Interventions with the system live must always be previously authorized by the employer, who shall supervision them evaluating the specific risk conditions.
+* Repair pneumatic systems and components only after having cut them off and having checked there is no residual pressure inside the components.
+* It is forbidden to carry out maintenance and lubrication interventions on moving components.
+* When working on heated parts, always wait for them to cool down to avoid burns or scalds.
+
+## 16.3. WARNINGS FOR A CORRECT MAINTENANCE
+
+For a good maintenance:
+
+* Follow the maintenance intervention intervals indicated in the manual; the interval (indicated in time or in working cycles) between interventions must be meant as max. limit not to be exceeded. If necessary, it can be shorter.
+* A correct preventive maintenance requires a constant care and continuous monitoring of the system and of the machines. Promptly check the cause for possible faults such as excessive noise, overheating, etc. and solve it.
+* In case of doubts, contact the manufacturer.
+
+## 17. MACHINE CLEANING
+
+It is recommended to use clothes wetted with preferably warm water and non–aggressive detergents for the machine general cleaning.
+
+Wash the machine remaining below the capping area.
+
+*The customer shall refer to the instructions by the supplier of the detergents used for cleaning the machine.*
+
+**It is absolutely forbidden to wash the machine with pressurized water jets or aggressive detergents.**
+
+## 18. SAFETY CHECKS
+
+### 18.1. AT THE END OF THE MAINTENANCE INTERVENTIONS, BEFORE STARTING THE MACHINE UP
+
+The qualified technician or staff performing the maintenance shall check that all the steps have been ended and all safety devices are correctly operating.
+
+## C. SCRAPPING AND DISPOSING
+
+In this section are listed some important operations to carry out if the demolition of the machine is not carried out by specialized firm for the dismalting and scrapping, but takes place customer offices.
+
+Proper precautions must be taken for out–of–order and scrapping of the machine in order to avoid possible dangerous situations.
+
+In particular, follow these general instructions:
+
+1. disconnect the machine from the electric network and check that no residual voltage exists;
+2. empty all the lubrication points of oil paying attention in not dispersing and dispose it according the laws in forces in the country where the machine has been used;
+3. lock all the moving parts of the machine, making sure that there are no possibilities of movement, also due to accidental collision during the transfer operation;
+4. with the help of qualified and authorized personnel proceed to the dismounting of components and the differentiated collection of materials (steel, plastic, electrical components, wires, etc.) in order to dispose everything according to the indications forseen by the laws in force.
+
+**Always use security clothes during the operations that require direct intervention on the machine**
+
+# D. UNLOAD AND INSTALLATION OF THE TURRET
+
+## 1. UNLOAD FROM THE MEAN OF TRANSPORT
+
+Mounting and connection operations of the turret to other units or components must be carried out by specialised personnel only.
+
+Unload the baseframe complete with the turret as follows:
+
+* hook using belts/chains of adequate capacity to hoist the weight indicated at point "a." page 1, to eyebolts placed on the transfer baseframe
+* hook the belts/chains to a crane and lift the turret.
+
+> *Lifting the machine, make sure that the belts/chains do not excessively press parts of the turret.*
+
+Transport the machine near the bottling line.
+
+> *Do not stand or walk under the machine when it is hoisted!*
+
+*(Fig. 5)*
+
+---
+
+## 2. LAYING THE TURRET
+
+### 2.1. REMOVAL OF THE COMPONENTS OF THE TURRET FROM THE TRANSFER BASEFRAME
+
+* Unscrew bolts that fixing the rear orientable support (**U**) to the supporting column (**S**)
+
+*(Fig. 6)*
+
+* Unscrew bolts that fixing the front orientable support (**Y**) to the flange (**T**)
+* Remove the horizontal shaft (**V**)
+* Unscrew bolts (**F**) fixing the reducer (**C**) to the fixed bush
+
+> **Unscrewing bolts (F) adequately hold the complete reducer block**
+
+* Remove the reducer (**C**) complete with the vertical shaft
+* Hook a lifting belt or rope to the fitting eyebolt (**A**) and tension it.
+
+*(Fig. 7 & Fig. 8)*
+
+* From the lower part of the supporting baseframe plate unscrew the screws (**B**) and remove the upper part of the turret
+
+*(Fig. 9)*
+
+* Unscrew the locking nut and the nut (**G**) and unthread the washer and the clutch spring (**H**)
+
+*(Fig. 10)*
+
+* Slide the balls supporting bush out (**I**)
+
+*(Fig. 11)*
+
+* Loosen the fixing grub screw (**L**)
+
+*(Fig. 12)*
+
+* Using a nose pliers remove the seeger (**M**) and unthread the bearings holder bush (**N**).
+
+*(Fig. 13)*
+
+* Unscrew and remove the greaser (**O**).
+* Remove the star-wheel support (**P**) from the fitting seat of the baseframe.
+* Remove the screw (**Q**) and unthread the star-wheel shaft from the baseframe plate.
+
+*(Fig. 14)*
+
+* Remove screws (**CB**) fixing the passage plane (**J**) to the passage plane support.
+* Unscrew nuts (**CC**) and remove them with the washers in such way to slide the passage plane out (**J**) from the supporting columns (**K**).
+* Unscrew columns (**K**) of the baseframe plate.
+
+*(Fig. 15)*
+
+* Unscrew screws and remove the passage plane support (**W**) from the baseframe plate
+
+*(Fig. 16)*
+
+## 2.2. ASSEMBLING OF THE TURRET ON THE MONO-BLOCK
+
+Make sure that the work place and the area for the installation of the turret are free.
+
+The ground must be dry and without oil in such way to avoid slipping and falling during the transport, installation, connection, adjustment ,ecc.
+
+* Hook a lifting belt or rope to the fitting eyebolt (**A**).
+
+*(Fig. 17)*
+
+> **Use a rope or belt adequate for the turret lifting and in compliance to the safety rules in force, checking them before to use them to see if there are some defects.**
+
+* Lift the turret and place it into the fitting seat on the mono-block.
+* Fix the upper part of the turret to the baseframe plate by screws (**B**). Screw from the lower part of the plate
+
+*(Fig. 18)*
+
+* Unhook the lifting belt and remove the eyebolt (**A**).
+* Place the reducer (**C**) complete with shaft (**D**) and conical pin (**E**) under the plate of the monoblock.
+
+> *Check that the timing of the movement trasmission shaft (**D**) with the grooved shaft inside the fixed bush of the turret; references must be aligned.*
+
+*(Fig. 19)*
+
+---
+
+* Fix the reducer (**C**) to the fixed bush of the turret by bolts (**F**).
+
+*(Fig. 20)*
+
+---
+
+* Place the star–wheel support (**P**) into the fitting plate of the baseframe.
+* Fix the star–wheel shaft to the baseframe plate by screws (**Q**). Screw under the plate.
+
+*(Fig. 21)*
+
+* Remount components on the star–wheel shaft proceeding in the reverse way to what described above.
+* Adjust the clutch torque carrying out on the nut and locking nut (**G**).
+
+> For a correct adjustment, the lower part of the locking nut must be aligned with the lower part of the threaded rod of the star–wheel shaft
+
+*(Fig. 22)*
+
+---
+
+* Screw the microswitch holder rod (**R**) under the baseframe plate.
+* Adjust the height of the microswitch carrying out on the fitting clamp in such way that the actioner is in contact with the lower part of the balls supporting bush.
+
+*(Fig. 23)*
+
+---
+
+* Fix the supporting column (**S**) under the baseframe plate.
+
+*(Fig. 24)*
+
+* Fix the flange (**T**) under the reducer (**C**)
+* Fix the rear orientable support (**U**) complete with horizontal shaft (**V**), to the supporting column (**S**)
+* Fix the front orientable support (**Y**) complete with conical pin (**Z**) to the flange (**T**)
+
+> *Check that the correct timing between the conical pin teeth (**E**) and (**Z**); the references indicated on pins must be aligned*
+
+* Fix the passage plane support (**W**) on the baseframe plate
+
+*(Fig. 25 & Fig. 26)*
+
+---
+
+* Screw on the baseframe plate the columns (**K**)
+* Place the bottles supporting plate (**X**) into the fitting seat of the passage plane (**J**)
+* Install the passage plane (**J**) on the supporting column and fix it by the fitting washers and nuts
+* Fix the passage plane (**J**) to the passage plane support (**W**)
+
+*(Fig. 27)*
+
+## 3. ELECTRIC CONNECTION
+
+Interventions on the electric system can only be carried out by SPECIALISED ELECTRICIANS, trained about the electric characteristics of the machine and about safety regulations too.
+
+FEEDING ELECTRIC PLANT must be built in accordance with law in force.
+
+The technical data relevant to the electric plant is shown in point "d.", page 2.
+
+Connect the electric cables to the terminal stripes.
+
+> *Both cable and relevant clamp to which must be connected have the same number.*
+
+Periodically check that the electric wirings are in perfect condition.
+
+### 3.1. ROTATION DIRECTION CHECK
+
+After the electric connections, check the that the rotation direction of motors of the turret (when provided) is the same of the one indicated by the arrow placed on the motors. The check can be carried out observing the rotation of cooling blades of the motor in object.
+
+If the rotation is not correct, it is necessary to:
+
+* invert the 2 phase power cables of the motor.
+* repeat the same operations to check if the rotation is correct.
+
+> *Check the correct plug–socket connections before machine power on.*
+
+---
+
+## 4. COMPONENTS INSTALLATION
+
+For the installation of the components of the machine, see the relevant chapters about these components. See the index for the consultation.
+
+## 5. PNEUMATIC CONNECTION
+
+Before carry out any operation make sure that the installation is not under pressure, and disconnect the feeding if necessary.
+
+Carry out the connection to the network as follows:
+
+* connect the main pneumatic unit coupling (**A**) to the distribution net,
+* if necessary, open the sliding valve (**B**),
+
+For pneumatic data see point "e." page 2.
+
+The pneumatic unit scheme is provided with the spare–parts catalogue.
+
+*(Fig. 28)*
+
+## E. FIRST START UP, OPERATING AND USE
+
+### 1. SETTING UP, CHECKS AND TEST FOR THE FIRST START UP
+
+> **The stting up operations of the machine for the first start up must be carried out by qualified technicians.**
+
+The machine has been tested by the Manufacturer premises before the shipping; all the calibration and eventual adjustments have been carried out during the test.
+
+---
+
+### 1.1. CHECKS BEFORE THE START UP
+
+*In order to prevent errors and/or accidents, before the start up of the machine it is necessary to carry out some checks:*
+
+* check that all the electric feeding phases are correctly connected;
+* check that the machine is correctly feeded, checking the tension;
+* check that there are no leaks in the pneumatic unit ;
+* check the correct motor absorption;
+* check the correct rotation direction of motors.
+
+## 2. OPERATION
+
+The turret cannot work autonomously.
+
+The customer must thus install the turret on his machine under his own responsibility and according to the European Community directives and take care that all requirements and specifications of the laws in force are complied with.
+
+---
+
+## 3. PRELIMINARY CHECKS
+
+Before starting the turret up, check the following:
+
+* check all safety devices are operating;
+* check all machine components are lubricated (see chapter LUBRICATION);
+* make sure the specific installed equipment are suitable for the size to be processed;
+* check the correspondence between container and cork to be treated;
+
+> Every set of equipment is marked as shown in the table "c." on page 1. Each mark corresponds to a size to be processed.
+
+* check the height of the closure unit according to the container height;
+* after checking and possibly adjusting the turret height, make sure the equipment is aligned;
+
+> To check the alignment, carry out a test making the machine perform a whole cycle at slow speed and in jog mode after having fed a few containers.
+
+* check the cork orientator is sufficiently full;
+* check that the working pressure is correct (the pressure is indicated on the pressure gauges).
+
+## 4. HEIGHT ADJUSTMENT OF THE TURRET
+
+To carry out the adjustment and check, proceed as described below:
+
+* unlock the screw (**A**) locking the column;
+* turn the handwheel (**B**) in clock-wise direction to lift the turret until to exceed the height of the bottle;
+* lean a bottle of the format to handle on the plate (**C**);
+* turn the handwheel (**B**) in counter clockwise direction to lower the turret until the spacer (**D**) is on the bottle;
+* lock the screw (**A**);
+* remove the bottle used for the adjustment;
+
+*(Fig. 29)*
+
+## 5. USE OF THE TURRET
+
+### 5.1. HEAD ROTATION SPEED ADJUSTMENT
+
+If it is necessary to adjust the rotation speed of the head it is necessary to carry out on the handwheel (**B**) of the variable speed–drive.
+
+The adjustment of the head rotation speed must be carried out when the motor is in rotation.
+
+The speed must be adjusted according to the production speed and the nuber of necessary rotations for the closure of the cap.
+
+The capping head rotation speed is correctly adjusted when, at the detachement there is only one click.
+
+If the head rotation is too high, there are other clicks before the exit of the bottle, due to rollers of the head that reprise the thread until, in some cases, to cut the cap, in this case decrease the rotation speed.
+
+If there are no click, increase the speed in order to avoid that the cap is not correctly closed.
+
+Carry out some closure tests before starting up the production.
+
+*(Fig. 30)*
+
+---
+
+### 5.2. DISCONNECTION FROM THE WORK CYCLE
+
+If it is necessary to exclude the turret from the work cycle, using the transfer belt for the container passage, it is necessary to:
+
+* lift the turret so as to remove the bottle–guide equipment;
+* remove the star–wheel;
+* remove the conveyor;
+* loosen bolts (**C**);
+* turn the support of 180°;
+* fix one of the bolts to lock the unit.
+
+*(Fig. 31)*
+
+## F. MAINTENANCE
+
+### 1. PERIODICAL CHECKS AND MAINTENANCE
+
+Routine checks and current maintenance described in this chapter aim at identifying operations necessary to keep the machine perfectly effective.
+
+CLOSYS S.r.l.'s Technical Assistance is available for Customers in order to solve any problem concerning use and maintenance of machines.
+
+Requests must be forwarded after careful analysis of problems and causes, specifying the following:
+
+* malfunctioning explanation in detail
+* all checks carried out
+* all adjustments carried out and their effects
+* any other useful information
+
+> **All the check, adjustement, maintenance and lubrication operations must be carried out by *qualified technicians*.**
+
+## 2. MAINTENANCE INTERVENTION
+
+The following table has the maintenance time limit and the necessary operations for a correct operating and a long lasting during of the machine.
+
+The described interventions are settled in intervals quantified in hours.
+
+| Interval (h) | Working in 1 shift | Working in 2 shifts | Working in 3 shifts |
+| --- | --- | --- | --- |
+| 8 | – | – | – |
+| 40 | 1 week | – | – |
+| 120 | 3 weeks | – | 1 week |
+| 250 | 6 weeks | 3 weeks | 2 weeks |
+| 500 | 3 months | 6 weeks | 1 month |
+| 1000 | 6 months | 3 months | 2 months |
+| 3000 | 12 months | 9 months | 6 months |
+| 6000* | * | * | 12 months |
+
+* every 6000 hours or anyway once a year.
+
+As an exemple in the table above there are correspondance calculated in weeks, months and years, considering daily workshifts of 8 hours each.
+
+---
+
+## 3. MAINTENANCE AND LUBRICATION PLANNING
+
+| operation | intervention type | reference |
+| --- | --- | --- |
+| 8 hours | lubrication | See chapter 5. on page 44 |
+| 40 hours | routine maintenance | See chapter 4. on page 35 |
+| 120 hours | lubrication | See chapter 5. on page 44 |
+| 120 hours | routine maintenance | See chapter 4. on page 35 |
+| 250 hours | lubrication | See chapter 5. on page 44 |
+| 500 hours | lubrication | See chapter 5. on page 44 |
+| 1000 hours | routine maintenance | See chapter 4. on page 35 |
+| 12000 hours | routine maintenance | See chapter 4. on page 35 |
+|  | extraordinary maintenance | See chapter 5. on page 39 |
+
+## 4. PLANNED MAINTENANCE
+
+### Every 40 operating hours
+
+| OPERATION | PURPOSE | NOTES |
+| --- | --- | --- |
+| **Air pressure check.** | Check the air feeding pressure devices.<br>
+
+<br>Check that manometers of the machine mark the pressure indicated on the fitted plate, out on them. |  |
+| **Cleaning of the threading head.** | Clean the closure heads by a cleaning with lukewarm water and lubricate after the drying for the good operating of the seaming and in particulary the threading rollers. |  |
+| **Check the heads roller.** | Check the perfect rotation of the threading and seaming rollers (they must turn freely). |  |
+
+> If compressed air is used (not recommended) it is necessary to wear protection gloves, earplugs and glasses, be careful to people close to the machine
+
+---
+
+### Every 120 operating hours
+
+| OPERATION | PURPOSE | NOTES |
+| --- | --- | --- |
+| **Cleaning of the orientator.** | Clean the orientator and check the correct feeding. | See the relevant chapter |
+| **Check the springs of the head.** | Check the efficiency of the springs in general and if it is necessary replace them. |  |
+
+> If compressed air is used (not recommended) it is necessary to wear protection gloves, earplugs and glasses, be careful to people close to the machine
+
+### Every 1000 operating hours
+
+| OPERATION | PURPOSE | NOTES |
+| --- | --- | --- |
+| **Check the threading head.** | Check the state of wear of springs and if it is necessary replace them.<br>
+
+<br>Check the state of wear of rollers and mothpresser and if it is necessary replace them. | See the relevant chapter |
+| **Check the springs of the caps pick off gripper device.** | Check the springs of the pick off gripper. If they are worn or damaged, replace them. |  |
+| **Check of height sliding of the turret.** | Check the correct sliding in height, letting the turret make an excursion from the minimum value to the maximum value, in such way to guarantee a good sliding of parts during the time. |  |
+
+| OPERATION | PURPOSE / DESCRIPTION | NOTES / REFERENCE |
+| --- | --- | --- |
+| **Equipment timing check.** | Check the timing of the whole equipment and if it is necessary time it again. | See "TRANSFER EQUIPMENT TIMING" page 39. |
+| **Electric connections check.** | Check and clean carefully all of the connections and, if necessary, replace worn parts.<br>
+
+<br>If any water infiltrations are found, even small ones, find immediately the source of the problem and eliminate it. |  |
+| **Noises check (visual and auditory) clearances and cuts.** | Check starting and stopping several times the machine without bottles, in order to check any abnormal noise, vibration in motorization components (motors reducers, gears and bearings).<br>
+
+<br>Replace all worn components.<br>
+
+<br>Lubricate the new installed components<br>
+
+<br>Clean and lubricate the dismounted components<br>
+
+<br>If there are any anomalies it is necessary to contact the TECHNICIAN SERVICE. |  |
+| **Pneumatic system check.** | Check proper operations and any leaks (fittings, pipes, etc.).<br>
+
+<br>* check the air pressure at machine entrance<br>
+
+<br>* feeding the pneumatic installation with compressed air, check that there are no leaks, broken or not connected pipes<br>
+
+<br>* check that manometers of the machine mark the pressure indicated on the fitted plate, put on them. |  |
+
+### Every 12000 operating hours
+
+| OPERATION | PURPOSE | NOTES |
+| --- | --- | --- |
+| **Machine general check.** | Check the regular operating of the machine, if there are any anomalies it is necessary to contact the *TECHNICIAN SERVICE*. |  |
+
+## 5. MAINTENANCE–TIMING
+
+### 5.1. TRANSFER EQUIPMENT TIMING
+
+#### 5.1.1. STAR–WHEEL TIMING
+
+In case the star–wheel is not timed, it is necesary to:
+
+* place the star–wheel, turning it manually on itself until the clutch device come back to its original seat (there is a click).
+
+If, after these operations, the star–wheel is not in the correct position, it is necessary to:
+
+* turn the machine by pulses until the bottle is in the closure point and the head descends until to touch the cap.
+* loosen the locking screw (**CW**).
+
+In this way the star–wheel is free to turn and so is possible to time it in such way that the pocket is coaxial to the head.
+
+* firmly lock the screw (**CW**).
+
+*(Fig. 32)*
+
+## G. LUBRICATION
+
+### 1. GENERAL INFORMATION
+
+> **All the lubrication operations must be carried out when the machine is stopped.**
+> **Before carry out any lubrication operation turn the machine on "Maintenance State".**
+
+> Before to start up the machine, check the lubrication of all the parts described in this section.
+
+If the machine is not used for a long time, carry out again the lubrication.
+
+Mineral oils, in case the machine is not use or has been stoppen for more than six months, lose their characteristics and must be replaced.
+
+---
+
+### 2. LUBRICANTS HOMOLOGATION ACCORDING TO USDA
+
+The homologation according to the USDA provides two cathgories: USDA – H1 and USDA – H2.
+
+* **H1** these initials mark Food grade lubricants which are lubricants that could be used in every friction points of food and pharmaceutical industry machine and equipements, in which contacts between lubricants and food considered technically inevitable.
+* **H2** these initials mark lubricants recommended for general use in food and pharmaceutical industry, supposing that there are no contacts with food.
+
+## 3. LUBRICANT TYPES (Page 42)
+
+The R&D department of CLOSYS S.r.l., after careful studies and functional tests, has decided to use the lubricants indicated in the table below to lubricate its machines (Page 42).
+
+| Point / Type | Klüber Lubrication | Molykote | Petro-Canada | DuPont |
+| --- | --- | --- | --- | --- |
+| **A** (grease) | Klübersinth UH1 64–62 | G4501 | Purity FG grease | — |
+| **B** (grease) | Klübersinth UH1–14–222 | G0052 | Purity FG grease | — |
+| **C** (oil) | Paraliq P 150 | L0115FG | Purity Chain Oil Light | — |
+| **D** (oil) | Klubersummit FG46 | L0346FG | Purity AW 46 | — |
+| **E** (grease) | — | — | PC Purity Synth | — |
+| **F** (grease) | Klüberpaste UH1 84–201 | P1900 | — | — |
+| **G** (grease) | Barrierta L55/1 | — | — | Krytox GPL 226 |
+| **H** (grease) | Klübersinth UH1 64–62 | G4501 | Purity FG grease | — |
+| **I** (oil) | — | Multi oil spray | Purity MF spray | — |
+| **J** (grease) | Klübersinth UH1 64–62 | G4501 | Purity FG grease | — |
+| **K** (grease) | Paraliq GB363 | G0052 | Purity FG grease | — |
+| **L** (grease) | Paraliq GB363 | G0052 | Purity FG grease | — |
+| **M** (grease) | Klübersinth UH1–14–222 | G0052 | Purity FG grease | — |
+| **N** (oil) | Klüberoil 4 UH1 220 N | L1122FG | Purity FG gear oil 220 | — |
+
+*(Page 42)*
+
+## 3.1. FEATURES OF THE USED LUBRICANTS (Page 43)
+
+The technical characteristics, specifications, and physical properties of the lubricants used are detailed below:
+
+### KLUBER
+
+* **Klübersinth UH1 64–62**: NSF: H1 | NLGI: 2 | Basic oil: PAO | Thickener: gel–silica | Viscosity index: — | Basic oil viscosity: 60 cSt | Processed penetration: 265–295 (0.1 mm) | Min. temp.: -40°C | Max. temp.: 150°C
+* **Paraliq P 150**: NSF: H1 | NLGI: — | Basic oil: WO | Thickener: — | Viscosity index: — | Basic oil viscosity: 150 cSt | Processed penetration: — | Min. temp.: -15°C | Max. temp.: 100°C
+* **Klubersummit FG46**: NSF: H1 | NLGI: — | Basic oil: PAO | Thickener: — | Viscosity index: 130 | Basic oil viscosity: 46 cSt | Processed penetration: — | Min. temp.: -45°C | Max. temp.: 135°C
+* **Klüberpaste UH1 84–201**: NSF: H1 | NLGI: 1 | Basic oil: PAO | Thickener: PTFE | Viscosity index: — | Basic oil viscosity: 200 cSt | Processed penetration: — | Min. temp.: — | Max. temp.: —
+* **Barrierta L55/1**: NSF: H1 | NLGI: 1 | Basic oil: PFPE | Thickener: PTFE | Viscosity index: — | Basic oil viscosity: 400 cSt | Processed penetration: — | Min. temp.: -40°C | Max. temp.: 260°C
+* **Paraliq GB363**: NSF: H1 | NLGI: 2 | Basic oil: MO | Thickener: silicate | Viscosity index: — | Basic oil viscosity: — | Processed penetration: 215–245 (0.1 mm) | Min. temp.: -30°C | Max. temp.: 140°C
+* **Klübersinth UH1–14–222**: NSF: H1 | NLGI: 2 | Basic oil: PAO | Thickener: complex aluminum | Viscosity index: — | Basic oil viscosity: 220 cSt | Processed penetration: 265–295 (0.1 mm) | Min. temp.: -35°C | Max. temp.: 100°C
+* **Klüberoil 4 UH1 220 N**: NSF: H1 | NLGI: — | Basic oil: PAO | Thickener: — | Viscosity index: 150 | Basic oil viscosity: 220 cSt | Processed penetration: — | Min. temp.: -25°C | Max. temp.: 120°C
+
+### MOLYKOTE
+
+* **G4501**: NSF: H1 | NLGI: 1 | Basic oil: PAO | Thickener: complex aluminum | Viscosity index: — | Basic oil viscosity: 100 cSt | Processed penetration: 310–340 (0.1 mm) | Min. temp.: -40°C | Max. temp.: 150°C
+* **G0052**: NSF: H1 | NLGI: 2 | Basic oil: MO | Thickener: complex aluminum | Viscosity index: — | Basic oil viscosity: 115 cSt | Processed penetration: 280 (0.1 mm) | Min. temp.: -12°C | Max. temp.: 150°C
+* **L0115FG**: NSF: H1 | NLGI: — | Basic oil: MO | Thickener: — | Viscosity index: 100 | Basic oil viscosity: 140 cSt | Processed penetration: — | Min. temp.: -18°C | Max. temp.: —
+* **L0346FG**: NSF: H1 | NLGI: — | Basic oil: MO | Thickener: — | Viscosity index: 100 | Basic oil viscosity: 46 cSt | Processed penetration: — | Min. temp.: -21°C | Max. temp.: —
+* **P1900**: NSF: H1 | NLGI: 1 | Basic oil: MO | Thickener: complex aluminum | Viscosity index: — | Basic oil viscosity: 85 cSt | Processed penetration: 290–340 (0.1 mm) | Min. temp.: -30°C | Max. temp.: 300°C
+* **Multi Oil Spray**: NSF: H1 | NLGI: — | Basic oil: MO | Thickener: — | Viscosity index: 102 | Basic oil viscosity: 96 cSt | Processed penetration: — | Min. temp.: -10°C | Max. temp.: 120°C
+* **L1122FG**: NSF: H1 | NLGI: — | Basic oil: PAO/MO | Thickener: — | Viscosity index: 142 | Basic oil viscosity: 197 cSt | Processed penetration: — | Min. temp.: -33°C | Max. temp.: —
+
+### PETRO–CANADA
+
+* **Purity FG grease**: NSF: H1 | NLGI: 1.5 | Basic oil: HT/MO | Thickener: complex aluminum | Viscosity index: — | Basic oil viscosity: 160 cSt | Processed penetration: 330 (0.1 mm) | Min. temp.: -15°C | Max. temp.: 150°C
+* **Purity AW 46**: NSF: H1 | NLGI: — | Basic oil: HT/MO | Thickener: — | Viscosity index: 108 | Basic oil viscosity: 46 cSt | Processed penetration: — | Min. temp.: -15°C | Max. temp.: —
+* **PC Purity Synth**: NSF: H1 | NLGI: 2 | Basic oil: PAO | Thickener: complex sulfonate calcium | Viscosity index: — | Basic oil viscosity: 46 cSt | Processed penetration: 294 (0.1 mm) | Min. temp.: -45°C | Max. temp.: 200°C
+* **Purity MF spray**: NSF: H1 | NLGI: — | Basic oil: HT/MO | Thickener: — | Viscosity index: 150 | Basic oil viscosity: 151 cSt | Processed penetration: — | Min. temp.: -9°C | Max. temp.: 150°C
+* **Purity FG Gear Oil 220**: NSF: H1 | NLGI: — | Basic oil: HT/MO | Thickener: — | Viscosity index: 92 | Basic oil viscosity: 206 cSt | Processed penetration: — | Min. temp.: -18°C | Max. temp.: —
+* **Purity Chain Oil Light**: NSF: H1 | NLGI: — | Basic oil: HT/MO | Thickener: — | Viscosity index: 150 | Basic oil viscosity: 151 cSt | Processed penetration: — | Min. temp.: -9°C | Max. temp.: 150°C
+
+### DUPONT
+
+* **Krytox GPL 226**: NSF: H1 | NLGI: 2 | Basic oil: PFPE | Thickener: PTFE | Viscosity index: 155 | Basic oil viscosity: 240 cSt | Processed penetration: — | Min. temp.: -30°C | Max. temp.: 288°C
+
+## 3.2. LUBRICANT RE–ORDERING (Page 44)
+
+The lubricants used for the machine can be directly ordered to *CLOSYS S.r.l.* or to the local distributors. See the international addresses below:
+
+* **Kluber Lubrication**: [http://www.klueber.com](http://www.klueber.com)
+* **Molykote**: [http://www.molykote.com](http://www.molykote.com)
+* **Petro-Canada**: [http://www.petro](https://www.google.com/search?q=http%3A%2F%2Fwww.petro)–canada.ca
+* **DuPont**: [http://www.krytox.com](http://www.krytox.com)
+
+---
+
+## 4. KEY TO THE LUBRICATION SCHEMES (Page 44)
+
+| Symbol | Description |
+| --- | --- |
+| **Grease gun** | Lubricate with manual pump for grease |
+| **Oil can** | Lubricate with manual pump for oil |
+| **Brush** | Lubricate with brush for grease |
+| **Spray bottle** | Lubricate with spray bottle |
+
+> *Grams are referred to each lubrication point.*
+
+---
+
+## 5. POINTS TO BE LUBRICATED (Page 44)
+
+> To protect the machine from wear, seizure or other severe damage to the mechanisms, it is necessary to lubricate and grease periodically all indicated points.
+
+> *CLOSYS S.r.l.* guarantees the maintenance intervals indicated hereby and the correct operation of the mechanisms exclusively with these lubricants.
+
+
+## Every 8 hours lubrication (Page 45)
+
+* **Lubrication Points:** See the chapter about the head.
+* **Description:** Lubricate:
+* Arms rollers.
+* Springs of seaming and threading rollers.
+* Seaming and threading rollers.
+
+
+
+---
+
+## Every 120 hours lubrication (Page 45)
+
+* **Lubrication Points:** See the chapter about the head.
+* **Description:** Lubricate the head central block.
+
+---
+
+## Every 250 hours lubrication (Page 45)
+
+* **Lubrication Points:** Shown on the machine baseframe plate.
+* **Description:** Lubricate the sliding columns.
+
+* Lubricate the central bearings (5 gr., **A**).
+* Lubricate the sliding roller (5 gr., **A**).
+
+---
+
+## Every 500 hours lubrication (Page 46)
+
+* **Lubrication Points:** See the indicated point on the machine component.
+* **Description:** Lubricate the star–wheel shaft (5 gr., **M**).
+
+* **Lubrication Points and Instructions (Page 47):**
+* Lubricate the star–wheel shaft bearings using a manual grease pump with 10 grams of lubricant type **M**.
+* Lubricate the star–wheel shaft gearings using a manual grease pump with 10 grams of lubricant type **M**.
+* Lubricate the motion transmission gearing using a brush with lubricant type **M**.
+* Lubricate the star–wheel rotation cam using a brush with lubricant type **M**.
+
+* **Front orientable support**: Lubricate using a manual grease pump with 3 grams of lubricant type **M**.
+* **Rear orientable support**: Lubricate using a manual grease pump with 3 grams of lubricant type **M**.
+* **Spindle controlling cam**: Remove the cover to lubricate; apply lubricant type **A** using a brush.
+
+*(Page 48)*
+
+## 6. LUBRICATION OF THE VARIABLE–SPEED DRIVE (Page 49)
+
+### 6.1. INTRODUCTION (Page 49)
+
+* The variable–speed drive features an identification plate (as shown in Fig. 33) containing all necessary references and indications for correct identification.
+
+---
+
+### Variable–speed drive V0.25 and V0.5 (Page 49)
+
+* These models are supplied with a load of synthetic "long life" lubricant oil of the Shell Donax TX type and do not have a service plug.
+* If there is no external contamination, periodical lubricant replacements are usually not carried out.
+
+---
+
+### Variable–speed drive V1 ...... V5.5 (Page 49)
+
+* It is recommended to perform the first lubricant replacement after about 300 operating hours and carefully clean the entire unit using suitable detergents.
+* Depending on the operating temperatures reached, subsequent lubricant replacements must follow the schedule below:
+
+| Oil temperature t [°C] | Lubricant replacement interval [h] |
+| --- | --- |
+| 65 ≤ t ≤ 80 | 4000 |
+| 80 ≤ t ≤ 95 | 2000 |
+
+*(Page 49)*
+
+## 6.2. LUBRICATION (Page 50)
+
+* Before starting up the variable–speed drive, check the oil level through the sight glass (where provided) and fill it to the brim if necessary.
+* Variable–speed drives V 0.25 and V 0.5 are supplied with synthetic "long life" **Shell Donax TX** lubricant oil and do not have a service plug.
+* Variable–speed drives from V1 to V5.5 are supplied with mineral lubricant oil **Shell Donax TA**.
+* **Important Warning:** Do not mix oils of different natures (never mix mineral and synthetic oils). If the exact oil is unavailable, completely empty the variable–speed drive and clean it with a light solvent before refilling.
+
+---
+
+### Lubricant Technical Data
+
+#### Shell Donax TX
+
+| Property | Standard | Value | Unit |
+| --- | --- | --- | --- |
+| **Volumetric mass** | ISO 3675 | 0,852 | kg/dm³ |
+| **Kinematic viscosity at 40° C** | ISO 3104 | 34 | cSt |
+| **Kinematic viscosity at 100° C** | ISO 3104 | 7,4 | cSt |
+| **Viscosity index** | ISO 2909 | 196 | – |
+| **Flame point** | ISO 2592 | 198 | °C |
+| **Sliding point** | ISO 3016 | -48 | °C |
+
+#### Shell Donax TA
+
+| Property | Standard | Value | Unit |
+| --- | --- | --- | --- |
+| **Volumetric mass** | ISO 3675 | 0,873 | kg/dm³ |
+| **Kinematic viscosity at 40° C** | ISO 3104 | 37,3 | cSt |
+| **Kinematic viscosity at 100° C** | ISO 3104 | 7,0 | cSt |
+| **Viscosity index** | ISO 2909 | 151 | – |
+| **Flame point** | ISO 2592 | 196 | °C |
+| **Sliding point** | ISO 3016 | -42 | °C |
+
+*(Page 50)*
+
+## LUBRICANT QUANTITIES FOR VARIABLE–SPEED DRIVES (Page 51)
+
+The lubricant capacities (in liters) for different variable–speed drive models depending on mounting positions **B3** and **B6** are detailed below:
+
+### B3 Mounting Position (Page 51)
+
+* **V 0.25 – V 0.5 (Donax oil TX - for life):**
+* V 0.25 F: 0.14 l
+* V 0.5 F: 0.18 l
+* V 0.25 U..., VR 0.25...: 0.12 l
+* V 0.5 U..., VR 0.5...: 0.15 l
+* VD 0.5 U..., VRD 0.5...: 0.30 l
+
+
+* **V 1 – V 2 (Donax oil TA - 2000–3000 hours):**
+* V 1 F: 0.30 l
+* V 2 F: 0.40 l
+* V 1 U..., VR 1...: 0.25 l
+* V 2 U..., VR 2...: 0.32 l
+* VD 1 U..., VRD 1...: 0.35 l
+* VD 2 U..., VRD 2...: 0.46 l
+
+
+* **V 3 – V 5.5 (Donax oil TA - 2000–3000 hours):**
+* V 3 F / V 5.5 F: 0.70 l
+* V 3 U, VR 3: 1.00 l
+* V 5.5 U, VR 5.5: 1.00 l
+* VD 3 F, VD 5.5 F: 1.30 l
+* VD 3 U, VRD 3 U: 1.60 l
+* VD 5.5 U, VRD 5.5 U: 1.60 l
+
+
+
+---
+
+### B6 Mounting Position (Page 51)
+
+* **V 0.25 – V 0.5 (Donax oil TX - for life):**
+* V 0.25 F: 0.14 l
+* V 0.5 F: 0.18 l
+* V 0.25 U..., VR 0.25...: 0.12 l
+* V 0.5 U..., VR 0.5...: 0.15 l
+* VD 0.5 U..., VRD 0.5...: 0.30 l
+
+
+* **V 1 – V 2 (Donax oil TA - 2000–3000 hours):**
+* V 1 F: 0.30 l
+* V 2 F: 0.40 l
+* V 1 U..., VR 1...: 0.25 l
+* V 2 U..., VR 2...: 0.32 l
+* VD 1 U..., VRD 1...: 0.35 l
+* VD 2 U..., VRD 2...: 0.46 l
+
+
+* **V 3 – V 5.5 (Donax oil TA - 2000–3000 hours):**
+* V 3 F / V 5.5 F: 0.90 l
+* V 3 U, VR 3: 1.00 l
+* V 5.5 U, VR 5.5: 1.00 l
+* VD 3 F, VD 5.5 F: 1.30 l
+* VD 3 U, VRD 3 U: 1.60 l
+* VD 5.5 U, VRD 5.5 U: 1.60 l
+
+## LUBRICANT QUANTITIES FOR VARIABLE–SPEED DRIVES (Page 52)
+
+The lubricant capacities (in liters) for different variable–speed drive models under mounting positions **B7** and **B8** are detailed below:
+
+### B7 Mounting Position (Page 52)
+
+* **V 0.25 – V 0.5 (Donax oil TX - for life):**
+* V 0.25 F: 0.14 l
+* V 0.5 F: 0.18 l
+* V 0.25 U..., VR 0.25...: 0.12 l
+* V 0.5 U..., VR 0.5...: 0.15 l
+* VD 0.5 U..., VRD 0.5...: 0.30 l
+
+
+* **V 1 – V 2 (Donax oil TA - 2000–3000 hours):**
+* V 1 F: 0.30 l
+* V 2 F: 0.40 l
+* V 1 U..., VR 1...: 0.25 l
+* V 2 U..., VR 2...: 0.32 l
+* VD 1 U..., VRD 1...: 0.35 l
+* VD 2 U..., VRD 2...: 0.46 l
+
+
+* **V 3 – V 5.5 (Donax oil TA - 2000–3000 hours):**
+* V 3 F/V 5.5 F: 0.90 l
+* V 3 U, VR 3: 1.00 l
+* V 5.5 U, VR 5.5: 1.00 l
+* VD 3 F, VD 5.5 F: 1.30 l
+* VD 3 U, VRD 3 U: 1.60 l
+* VD 5.5 U, VRD 5.5 U: 1.60 l
+
+
+
+---
+
+### B8 Mounting Position (Page 52)
+
+* **V 0.25 – V 0.5 (Donax oil TX - for life):**
+* V 0.25 F: 0.14 l
+* V 0.5 F: 0.18 l
+* V 0.25 U..., VR 0.25...: 0.12 l
+* V 0.5 U..., VR 0.5...: 0.15 l
+* VD 0.5 U..., VRD 0.5...: 0.30 l
+
+
+* **V 1 – V 2 (Donax oil TA - 2000–3000 hours):**
+* V 1 F: 0.30 l
+* V 2 F: 0.40 l
+* V 1 U..., VR 1...: 0.25 l
+* V 2 U..., VR 2...: 0.32 l
+* VD 1 U..., VRD 1...: 0.35 l
+* VD 2 U..., VRD 2...: 0.46 l
+
+
+* **V 3 – V 5.5 (Donax oil TA - 2000–3000 hours):**
+* V 3 F/V 5.5 F: 1.00 l
+* V 3 U, VR 3: 1.30 l
+* V 5.5 U, VR 5.5: 1.30 l
+* VD 3 F, VD 5.5 F: 1.60 l
+* VD 3 U, VRD 3 U: 1.90 l
+* VD 5.5 U, VRD 5.5 U: 1.90 l
+
+## LUBRICANT QUANTITIES FOR VARIABLE–SPEED DRIVES (Page 53)
+
+The lubricant capacities (in liters) for different variable–speed drive models under mounting position **V5** are detailed below:
+
+### V5 Mounting Position (Top Section)
+
+* **V 0.25 – V 0.5 (Donax oil TX - for life):**
+* V 0.25 F: 0.28 l
+* V 0.5 F: 0.30 l
+* V 0.25 U..., VR 0.25...: 0.22 l
+* V 0.5 U..., VR 0.5...: 0.27 l
+
+
+* **V 1 – V 2 (Donax oil TA - 2000–3000 hours):**
+* V 1 F: 0.58 l
+* V 2 F: 0.78 l
+* V 1 U..., VR 1...: 0.40 l
+* V 2 U..., VR 2...: 0.54 l
+
+
+* **V 3 – V 5.5 (Donax oil TA - 2000–3000 hours):**
+* V 3 F/V 5.5 F: 2.10 l
+* V 3 U / VR 3: 2.00 l
+* V 5.5 U / VR 5.5: 2.00 l
+
+
+
+---
+
+### V5 Mounting Position (Bottom Section)
+
+* **V 0.25 – V 0.5 (Donax oil TX - for life):**
+* VD 0.5 U..., VRD 0.5...: 0.70 l
+
+
+* **V 1 – V 2 (Donax oil TA - for life):**
+* VD 1 U..., VRD 1...: 1.00 l
+* VD 2 U..., VRD 2...: 1.50 l
+
+
+* **V 3 – V 5.5 (Donax oil TA - 2000–3000 hours):**
+* VD 3 F, VD 5.5 F: 4.50 l
+* VD 3 U, VRD 3 U: 4.80 l
+* VD 5.5 U, VRD 5.5 U: 4.80 l
+
+
+
+*(Page 53)*
+
+## 6.3. OIL REPLACEMENT FOR V1.....V5.5
+
+* **1)** Place a container of adequate capacity under the discharge plug.
+* **2)** Remove the charge, discharge and level plugs and let the oil freely flow.
+> *To make easier the discharge operation, it is recommended to operate with hot oil.*
+
+
+* **3)** Wait some minutes so that all the oil is went out, then screw again the discharge plug, after the gasket has been replaced.
+* **4)** Put the variable–speed drive in its definitive position and pour oil. Pour slowly the lubricant to make easier an uniform filling. Stop when the level hole is reached. Screw again the level plug, afte the gasket has been rerplaced, and complete the filling until the half has been reached.
+* **5)** Screw the charge plug, after the gasket has been replaced.
+
+---
+
+> *The exhausted oil must be disposed according to the environment protection norms.*
+
+> *If there are leaks, before to reset the lubricant quantity, it is necessary to find the cause of the problem before startin up again the variable–speed drive.*
+
+## 7. REDUCER LUBRICATION (Page 55)
+
+### 7.1. INTRODUCTION (Page 55)
+
+* On the reducer, there is an identification plate (as shown in Fig. 34) that contains all necessary references and indications for correct identification.
+
+---
+
+### 7.2. LUBRICATION (Page 55)
+
+* **Reducers VF30....VF49 and W63....W86:** These low-power average reducers utilize permanent lubrication with synthetic oil. They do not have charge, discharge, or level oil plugs and require no maintenance since they already contain the correct amount of oil.
+* **Reducers VF130....VF150 and W110:** These high-power average reducers use oil lubrication and are equipped with charge, discharge, and level oil plugs.
+* **Lubricant Type:** Reducers are supplied with a lubrication oil load of the **Shell Tivela oil S320** type.
+
+---
+
+### Oil Quantity Table (litres) (Page 55)
+
+| Model / Ratio | B3 | B6 | B7 | B8 | V5 |
+| --- | --- | --- | --- | --- | --- |
+| **VF30** | 0.045 | 0.045 | 0.045 | 0.045 | 0.045 |
+| **VF44** | 0.075 | 0.075 | 0.075 | 0.075 | 0.075 |
+| **VFR44** | 0.050 | 0.050 | 0.050 | 0.050 | 0.050 |
+| **VF49** | 0.12 | 0.12 | 0.12 | 0.12 | 0.12 |
+| **VFR49** | 0.065 | 0.065 | 0.065 | 0.065 | 0.065 |
+| **VF130 (HS)** | 3.9 | 2.5 | 2.5 | 2.3 | 3.3 |
+| **VF130 (P(IEC))** | 3.0 | 2.5 | 2.5 | 2.3 | 3.3 |
+| **VFR130** | 0.40 | 0.50 | 0.50 | 0.70 | 0.40 |
+| **W63 (i = 7...15)** | 0.31 | 0.31 | 0.31 | 0.31 | 0.31 |
+| **W63 (i = 19...100)** | 0.38 | 0.38 | 0.38 | 0.38 | 0.38 |
+| **W75 (i = 7...15)** | 0.48 | 0.48 | 0.48 | 0.48 | 0.48 |
+| **W75 (i = 30, 40)** | 0.52 | 0.52 | 0.52 | 0.52 | 0.52 |
+| **W75 (i = 20...100)** | 0.56 | 0.56 | 0.56 | 0.56 | 0.56 |
+| **W86 (i = 7...15)** | 0.64 | 0.64 | 0.64 | 0.64 | 0.64 |
+| **W86 (i = 30)** | 0.73 | 0.73 | 0.73 | 0.73 | 0.73 |
+| **W86 (i = 20...100)** | 0.90 | 0.90 | 0.90 | 0.90 | 0.90 |
+| **W110 (P80...P132)** | 1.5 | 1.7 | 1.7 | 1.9 | 1.7 |
+| **W110 (M2–M3)** | 1.5 | 1.7 | 1.7 | 1.9 | 1.7 |
+| **W110 (7 ≤ i ≤ 15)** | 1.5 | 1.7 | 1.7 | 1.9 | 1.7 |
+| **W110 (20 ≤ i ≤ 100)** | 2.7 | 1.7 | 1.7 | 1.9 | 1.7 |
+
+## 7.3. OIL REPLACEMENT FOR VF130....VF150 AND W110 (Page 56)
+
+> It is recommended, if the lubricants is not of the recommended ones, that it has an equivalent composition on synthetic nature and viscosity. Moreover it must have the suitable antifoam additives.
+
+* Do not mix oil with different trade marks and characteristics and check that the oil in use has high anti–foam characteristics and EP.
+* If an identic lubricat is not available completely empty the reducer and clean it inside with a light solvent, before the next filling.
+
+### Procedure Steps
+
+* **1)** Place a container of adequate capacity under the discharge plug.
+* **2)** Remove the charge, discharge and level plug and let the oil freely flow.
+> To make easier the discharge operation, it is recommended to operate with hot oil.
+
+
+* **3)** Wait some minutes so that all the oil is went out, then screw again the discharge plug, after the gasket has been replaced.
+* **4)** Pour new oil only afterr the reducer is its definitive position, until the half of the level plug is reached.
+* **5)** Screw the charge plug, after the gasket has been replaced.
+
+---
+
+> **The exhausted oil must be disposed according to the environment protection norms**
+
+> If there are leaks, before to reset the lubricant quantity, it is necessary to find the cause of the problem before startin up again the reducer.
+
+## H. FORMAT CHANGE (Page 57)
+
+### 1. PREMISE (Page 57)
+
+> **All the equipment change operations must be carried out when the machine is not operating.**
+> **Close pneumatic feeding.**
+
+* The machine has been designed to handle containers and corks described in table "c." page 1.
+* It is necessary that each container and cap is handled exclusively with the equipment indicated in the table.
+* Each series of equipment is marked according to the format to handle:
+* container body guide equipments are marked by coloured wedges.
+* caps guide equipments, in case of several formats, are marked by an identification letter.
+
+
+* See table "c." page 1 for the formats identification.
+* When delivered the machine is ready to apply one of the types of containers and caps for which has been manufactured.
+* To carry out correctly and without obstructions the format change operations it is necessary to lift the turret to its maximum height as described in paragraph 4. page 31.
+
+---
+
+### 2. CONTAINERS FORMAT CHANGE (Page 57)
+
+If it is necessary to change the format of the container to handle it could be necessary to proceed as described in section "INSTALLATION AND REMOVAL OF THE BOTTLES TRANSFER EQUIPMENT":
+
+* replace the conveyor,
+* replace the star–wheel.
+
+Moreover it is necessary to adjust in height the turret (see par. 4. page 31).
+
+---
+
+### 3. CAP FORMAT CHANGE (Page 57)
+
+When it is necessary to change the type of cap to apply, it could be necessary to proceed as described in section "COMPONENTS ON THE MACHINE", replace the:
+
+* caps distribution unit,
+* orientating unit,
+* closure head.
+
+*(Page 57)*
+
+## I. INSTALLATION AND REMOVAL OF THE BOTTLES TRANSFER EQUIPMENT (Page 59)
+
+### 1. CONVEYOR
+
+#### 1.1. REMOVAL
+
+* Unscrew fixing knobs (**CN**) of the conveyor.
+* Remove the conveyor (**CO**).
+
+#### 1.2. INSTALLATION
+
+* Place the conveyor (**CO**) into fitting seats.
+* Fix by knobs (**CN**).
+* Adjust the position of the conveyor in the following way:
+* insert two bottles into the pockets of the star–wheel
+* near the conveyor to the bottles.
+
+
+
+> check that bottles have a minimum clearance in such way to allow a regular flow
+
+---
+
+### 2. STAR–WHEEL
+
+#### 2.1. REMOVAL
+
+* Unscrew bolts (**CR**).
+* Remove the star–wheel (**CS**).
+
+#### 2.2. INSTALLATION
+
+* Place the star–wheel into the fitting seats.
+* Lock by bolts (**CR**).
+
+*(Fig. 35, Fig. 36, Fig. 37, Page 59)*
+
+## J. COMPONENTS ON THE MACHINE (Page 61)
+
+* In the following chapters, complete instructions are provided regarding the components supplied with the machine.
+* The instructions for the components are grouped into a single chapter for each individual component, allowing customers to easily refer to information regarding their use.
+
+> The operations indicated in this section are for the *qualified technician*.
+
+## 1. THREADING HEAD (Page 62)
+
+> **All operations on the machine must be made when it is stopped.**
+
+### 1.1. TOOLS NEEDED FOR DISMOUNTING AND MAINTENANCE (Page 62)
+
+| No. | Tool Description | Supplied |
+| --- | --- | --- |
+| **6** | Wrench for ring nut 58–62–65 | YES |
+| **7** | Wrench for ring nut 34–36 | YES |
+| **8** | Hexagonal wrench | YES |
+| **9** | Hexagonal wrench 19 | YES |
+| **10** | Hexagonal wrench 10 | YES |
+| **11** | Wrench for socket head screws 3 mm | YES |
+| **12** | Tube hexagonal wrench 6–7 | YES |
+| **13** | Noose wrench | YES |
+| **14** | Adjustment caliper | YES |
+
+*(Page 62)*
+
+## 1.2. THREADING HEAD REPLACEMENT/REMOVAL (Page 63)
+
+To replace or remove the threading head carry out the following operations:
+
+### 1.2.1. REMOVAL
+
+* Insert the wrench (**6**) into seats (**A**) of the threading head (**B**) and unscrew to remove the head; if it is locked, it is sufficient to give a light stroke on the handle of the wrench.
+* Complete the head removal, loosening by hand.
+
+*(Fig. 38)*
+
+---
+
+### 1.2.2. MOUNTING
+
+* Center the seat of the key (**C**) and put manually the thread on the head of the spindle.
+* Complete the screwing of the head using the wrench (**6**).
+
+*(Fig. 39, Page 63)*
+
+
+## 1.3. HEAD ADJUSTMENT (Page 64)
+
+> The head is already delivered for the type of cap ordered by the customer and does not need any other adjustment. If it is necessary to proceed to a new adjustment (after the periodical maintenance or for a format change) follow the instructions described here below.
+
+* Remove the head from the machine as described in paragraph 1.2. on page 63.
+
+---
+
+### 1.3.1. HEAD PREPARATION (Page 64)
+
+* Insert the head in a jaw with soft claws.
+* Using the wrench (**11**), unscrew the fixing Allen screws (**E**) and remove the centering device (**F**).
+* Using the wrench (**10**), unscrew and remove the studs (**G**) of the centering device.
+* Insert the suitable adjustment caliper (**14**), indicated in the adjustment table, on the mouthpresser.
+* Take the holder arms to the closing position pushing the head downwards.
+
+*(Fig. 40, Fig. 41, Fig. 42, Page 64)*
+
+## 1.3.2. THREADING ROLLER ADJUSTMENT (Page 65)
+
+To adjust the threading roller, follow these steps:
+
+* Using the wrench (**11**), loosen the grub screws (**H**) to free the bush (**I**).
+* Using the wrench (**8**), screw or unscrew the bush (**I**) to bring the threading roller (**L**) to the height of the adjustment caliper plane.
+* Further screw or unscrew the bush (**I**) as indicated in the adjustment table.
+* Once the adjustment is complete, use the wrench (**11**) to lock the grub screws (**H**).
+
+*(Fig. 43, Fig. 44, Fig. 45, Page 65)*
+
+## 1.3.3. THREADING ROLLER LATERAL LOAD ADJUSTMENT (Page 67)
+
+When the thread of the cap is too much pressed and the metal is cut in some points, it is necessary to:
+
+* Using the wrench (**9**), loosen the nut (**P**).
+* Using the wrench (**6**), unscrew the spring holder bush (**Q**) until obtaining the suitable engravement.
+
+When the thread of the cap is not pressed, it is necessary to:
+
+* Using the wrench (**9**), loosen the nut (**P**).
+* Using the wrench (**11**), screw the spring holder bush (**Q**) until obtaining the suitable engravement.
+* Repeat the same operations for all the threading rollers.
+
+> It is recommended, before starting the production, to carry out some closure tests.
+
+*(Fig. 48, Page 67)*
+
+## 1.3.4. SEAMING ROLLER ADJUSTMENT (Page 68)
+
+To adjust the seaming roller, carry out the following steps:
+
+* Using the wrench (**11**), loosen the grub screws (**R**) in such a way to free the bush (**S**).
+* Using the wrench (**8**), screw or unscrew the bush (**S**) in such a way to take the seaming roller (**T**) to the height of the adjustment caliper (**14**) plane.
+* Further screw or unscrew the bush (**S**) as indicated in the adjustment table.
+* When the adjustment is complete, using the wrench (**11**), lock the grub screws (**R**).
+
+*(Fig. 49, Fig. 50, Fig. 51, Page 68)*
+
+## Seaming Roller Adjustment (Continued) (Page 69)
+
+* Loosen the nut (**U**) using the wrench (**10**).
+* Using the wrench (**11**), loosen the grub screw (**V**) in such a way to take the seaming roller (**T**) in contact with the caliper seat.
+* Lock the nut (**U**) making sure that the grub screw (**V**) does not move.
+
+*(Fig. 52)*
+
+* Repeat the same operation on all the seaming arms.
+* Free the cam (**M**) taking it in rest position (upwards).
+
+*(Fig. 53, Page 69)*
+
+## 1.3.5. SEAMING ROLLER LATERAL LOAD ADJUSTMENT (Page 70)
+
+When the seaming on the cap is not well carried out, it is necessary to:
+
+* Using the wrench (**9**), loosen the nut (**W**).
+* Using the wrench (**11**), screw or unscrew the spring holder bush (**Z**) until obtaining the suitable seaming.
+* Repeat the same operation on all the seaming rollers.
+
+---
+
+> It is recommended, before starting the production, to carry out some closure tests.
+
+*(Fig. 54, Page 70)*
+
+
+## 1.4. MOUTHPRESSER REPLACEMENT (Page 71)
+
+Remove the head from the machine as described in paragraph 1.2. on page 63 and operate as follows:
+
+* Insert the head in a jaw with soft claws.
+* Using the wrench (**11**), unscrew the fixing Allen screws (**E**) and remove the centering device (**F**).
+* Using the wrench (**10**), unscrew and remove the studs (**G**) of the centering device.
+* To remove the mouthpresser it is necessary:
+* To remove the arm return spring (**J**).
+* Using the wrench (**11**), loosen the grub screws (**K**).
+* Slide the pins (**Y**) out.
+* Remove the rollers (**W1**) and (**W2**) holder arms out.
+
+
+
+*(Fig. 55, Fig. 56, Fig. 57, Page 71)*
+
+## MOUTHPRESSER REPLACEMENT (CONTINUED) (Page 72)
+
+* Using the wrenches (**7**) inserted into the hole of the mouthpresser and the hole of the central shaft (**AA**), unscrew and remove the mouthpresser (**AB**).
+* If the mouthpresser is locked, giving a light stroke on the handle of the wrench is sufficient.
+
+---
+
+> **The mouthpresser threading is counterclockwise.**
+
+* Mount the mouthpresser for the new type of closure.
+* Remount the arms and the centering device by proceeding in the reverse order of the previous description.
+* Carry out the adjustment indicated in paragraph 1.3 on page 64.
+* Remount the head.
+
+*(Fig. 58, Page 72)*
+
+## 1.5. SPRING REPLACEMENT (Page 73)
+
+### 1.5.1. THREADING ROLLER SPRINGS (Page 73)
+
+* Press the spring and slide the threading roller washer (**AC**) out from its seat.
+* Slide the spring (**AD**) out.
+* Insert the new spring on the threading roller and keep it pressed.
+* Reposition the threading roller washer (**AC**) in its seat.
+
+*(Fig. 59, Fig. 60, Page 73)*
+
+## 1.5.2. SEAMING ROLLER SPRING (Page 74)
+
+* Push the spring (**AE**) downwards.
+* Slide the seaming roller washer (**AF**) out from its seat.
+* Slide the spring (**AE**) out.
+* Insert the roller holder arm (**W2**) complete with seaming roller (**T**) in a jaw with soft claws.
+* Insert the new spring on the seaming roller and keep it pressed by the wrench (**13**).
+* Reposition the seaming roller washer (**AF**) in its seat.
+
+*(Fig. 61, Fig. 62, Fig. 63, Page 74)*
+
+## 1.5.3. ARM RETURN SPRING (Page 75)
+
+* Unhook the spring (**J**).
+* Replace the spring with a new one.
+
+---
+
+## 1.5.4. LATERAL LOAD SPRINGS (Page 75)
+
+* Using the wrench (**9**) loosen the nut (**W**).
+* Using the wrench (**11**) unscrew the spring holder bush (**Z**).
+* Slide the spring inside the bush out and replace it with a new one.
+* Lightly grease the spring.
+* Remount the bush (**Z**) and adjust the roller lateral load.
+* Lock the nut (**W**).
+
+*(Fig. 64)*
+
+---
+
+## 1.5.5. COMPENSATION SPRING (Page 75)
+
+* Dismount the head from the spindle.
+* Remove and replace the compensation spring (**AG**).
+* Remount the head on the spindle.
+
+*(Fig. 65)*
+
+---
+
+## 1.6. HEAD CLEANING (Page 75)
+
+* It is recommended to use rags wetted with preferably warm water and non–aggressive detergents for the general cleaning.
+* *The customer shall refer to the instructions by the supplier of the detergents used for cleaning the machine.*
+* *It is absolutely forbidden to wash with pressurized water jets or aggressive detergents.*
+* Do not use cotton wool or other flimsy materials.
+* It is hazardous to use compressed air.
+
+*(Page 75)*
+
+## 1.7. HEAD COMPONENT LUBRICATION (Page 76)
+
+For lubricant references, please see paragraph 3 on page 42.
+
+---
+
+### 1.7.1. EVERY 8 HOURS
+
+* **Arm rollers:** Lubricate the arm rollers using **"I"-type** lubricant. *(Fig. 66)*
+* **Threading and seaming rollers and springs:** Lubricate the threading and seaming rollers and springs using **"I"-type** lubricant. *(Fig. 67)*
+
+---
+
+### 1.7.2. EVERY 120 HOURS
+
+* **Head central block:** Lubricate the head central block using **"K"-type** lubricant. *(Fig. 68)*
+
+## 2. CENTRIFUGAL ORIENTATOR (Page 77)
+
+### 2.1. INSTALLATION OF THE ORIENTATOR (Page 77)
+
+For the installation of the centrifugal orientator, see the operations listed below:
+
+* Remove the cover (**A**). *(Fig. 69)*
+* Remove screws (**B**) and unthread the central cone (**C**). *(Fig. 70)*
+
+*(Page 77)*
+
+## CENTRIFUGAL ORIENTATOR INSTALLATION (CONTINUED) (Page 78)
+
+To complete the installation of the centrifugal orientator, follow these steps:
+
+* Screw an eyebolt (**D**) at the center of the rotating disc. *(Fig. 71)*
+* Hook a belt or a chain with hooks (**E**) to the eyebolt (**D**) and lift the orientator using adequate lifting means. *(Fig. 72)*
+> **Warning:** Do not stand or walk under the orientator when it is hoisted!
+
+
+* Place the orientator on the support (**F**) in such a way that the exit mouth coincides with the caps chute. *(Fig. 73)*
+* Fix the orientator to the machine using bolts (**I**). *(Fig. 73)*
+* Remove the eyebolt (**D**), remount the cone, and fix it with the screw (**B**). *(Fig. 73)*
+
+## CENTRIFUGAL ORIENTATOR INSTALLATION (CONTINUED) (Page 79)
+
+* If necessary, fix the caps chute to the caps exit mouth (**H**). *(Fig. 74)*
+* Connect the air main tube (ø8) of the main pneumatic unit to the coupling (**T**) of the pneumatic unit. *(Fig. 75)*
+* If necessary, open the sliding valve (**U**). *(Fig. 75)*
+* Connect the motor electric feeding cables. *(Fig. 76)*
+* Check that the rotation direction of the inner disc (**Z**) is correct (the rotation must be sufficient in order to insert caps into the exit mouth); on the contrary:
+* Invert 2 of the phases of motor feeding.
+* Repeat the listed above operations to check if the rotation is regular. *(Fig. 76)*
+
+## 2.2. ORIENTATOR LOADING (Page 80)
+
+* When loading the orientator, you must follow the precautions indicated in the paragraph "PRECAUTIONS FOR OPERATORS SAFETY" in the "GENERAL INFORMATION" section.
+* A caps level sensor (**L**) is installed on the orientator with the task of signaling to the automatic elevator when it is necessary to add a new quantity of caps. *(Fig. 77)*
+* For correct operation, if the orientator is loaded with a different system from the automatic elevator, it is necessary to supply a quantity of caps that reaches at least 5 mm under the lower plate of the device.
+
+---
+
+## 2.3. ORIENTATOR EMPTYING (Page 80)
+
+To discharge the orientator, it is necessary to carry out the following operations:
+
+* Make sure the mode switch *AUT/MAN* is on *MAN* and remove the key.
+* Rotate the caps sorter until the caps orientator is totally empty.
+
+
+## 2.4. CAPS FORMAT CHANGE (Page 81)
+
+For the caps format change, it could be necessary to proceed as described below:
+
+* Remove the pneumatic connections (**M**). *(Fig. 78)*
+* Remove the fixing screws (**N**). *(Fig. 79)*
+* Remove the whole mouth (**H**). *(Fig. 79)*
+* If in the "set" there is also the return pipe (**O**), it is necessary to replace it. *(Fig. 80)*
+
+## CAPS FORMAT CHANGE (CONTINUED) (Page 82)
+
+* **Inner Ring Height Adjustment:** If the height of the cap is different, adjust the height of the inner ring (**V**) by operating on the screws (**X**) so that a 3 mm space is maintained between the cap and the inner ring. *(Fig. 81, Fig. 82)*
+* **Door Position Adjustment:** The orientator includes a door (**S**) that utilizes centrifugal force to eject unseamed caps. If the height of the handled caps changes, adjust the position of the door using the knobs (**K**) to ensure proper ejection of unseamed caps. *(Fig. 83)*
+
+## 2.5. ADJUSTMENT OF THE ORIENTATOR (Page 83)
+
+* If the cap is not correctly shifted by the nozzles, it is sufficient to increase or decrease the air pressure by fitting pressure reducers. *(Fig. 84)*
+
+> Use compressed air without impurities.
+
+---
+
+## 2.6. MAINTENANCE OF THE ORIENTATOR (Page 83)
+
+* The orientator does not need a particular maintenance.
+* It is sufficient to perform a daily cleaning and the removal of deformed caps that may cause a caps chute obstruction. *(Fig. 85)*
+
+If there is an anomalous distribution, it is necessary to carry out the following operations:
+
+* Check that the nozzles (**P**) are not obstructed and are in the correct position to push caps, not correctly orientated, into the caps chute. *(Fig. 85)*
+
+## Maintenance of the Orientator (Continued) (Page 84)
+
+* Check that the nozzle or nozzles, if more than one, (**Q**) is not obstructed. *(Fig. 86)*
+* Check that the nozzle (**R**) is not obstructed. *(Fig. 87)*
+* Check that in the return pipe (**S**) there are no caps; if there are caps it is necessary to remove them. *(Fig. 87)*
+
+> Use compressed air without impurities.
+
+## 3. CAPS CHUTE (Page 85)
+
+### 3.1. CAPS CHUTE INSTALLATION
+
+To install the caps chute on the machine, it is necessary to carry out the following operations:
+
+* Place the bracket (**A**) complete with the caps chute and caps distribution head on the bracket (**B**) of the upper plate.
+* Fix by bolt (**C**).
+* Check that the bottle neck is at the center of the caps distribution head (**D**).
+* Couple the electric connection of the photocell (**E**) (one or more).
+
+> **Note:** On the bracket (**B**) there are two centering dowels.
+
+*(Fig. 88, Fig. 89, Page 85)*
+
+## 3.2. DISCHARGE OF THE CAPS CHUTE (Page 86)
+
+To discharge the caps chute it is necessary to operate as follows:
+
+* Put a collect container under the caps distribution head (**D**).
+* Remove the arms spring (**M**).
+* Open the arms (**N**).
+* Empty the caps chute.
+* Close the arms (**N**).
+* Reposition the arms spring (**M**).
+
+*(Fig. 90)*
+
+---
+
+## 3.3. CAPS FORMAT CHANGE (Page 86)
+
+When the cap to handle changes, it could be necessary to replace the caps chute and the distribution head proceeding as follows:
+
+* Disconnect the electric connections from the photocell (**E**) (one or more).
+* Unscrew and remove the bolt (**C**).
+* Remove the whole caps chute (**G**).
+* Mount, proceeding in the reverse way, the caps distribution unit suitable to the new type of cap to handle.
+
+> On the bracket (**B**) there are two centering dowels.
+
+* Check that the caps chute is aligned to the caps exit mouth of the orientator.
+* Connect the electric connections of the photocell (**E**) (one or more).
+
+*(Fig. 91, Fig. 92, Page 86)*
+
+## K. PROBLEMS AND SOLUTIONS (Page 87)
+
+### 1. INTRODUCTION
+
+* The problem list in the following pages can be helpful in finding the causes of problems and how to eliminate them as soon as possible.
+* It is necessary that finding and interventions on problems are carried out with method (from the most probable cause to the least probable cause) and following a logical sequence.
+* Follow the scale method: a first intervention, test of the obtained result, and then passage to the following problem.
+* The list refers to the machine. If the machine is working in synchronism with a production line, it is necessary to read the manuals of the other machines of the line.
+* The main units of the machine are the following:
+* Containers transfer
+* Closure unit
+* Caps/corks distribution
+* Caps/corks feeding
+
+
+
+*(Page 87)*
+
+## PROBLEMS AND SOLUTIONS (Page 88)
+
+* **Lifting or lowering the head, it does not move in height**
+* **Cause:** Interferences with the containers conveying equipment, foreign bodies into the lifting mechanism, or other obstructions.
+* **Solution:** Find the cause that prevents lifting and eliminate it.
+
+
+* **Containers are deformed, broken, or badly driven during the load phase**
+* **Cause:** The star-wheel is not timed with the turret, or container transfer equipment is not suitable.
+* **Solution:** Time the star-wheel with the turret, or replace equipment with the suitable one for the format being handled.
+
+
+* **Containers are deformed or break during the closure phase**
+* **Cause:** The head is positioned too low, or container transfer equipment is not suitable.
+* **Solution:** Place the head at the correct height for the container, or replace equipment with the suitable one for the format being handled.
+
+
+* **Caps do not descend from the caps sorter**
+* **Cause:** The exit mouth of the caps sorter is obstructed, or caps are off-size/deformed.
+* **Solution:** Remove any obstructing caps, parts of caps, or foreign bodies, and use caps of a suitable format with uniform characteristics.
+
+
+* **The cap is too little or not threaded**
+* **Cause:** Insufficient pressure from threading rollers, incorrect head height, a broken head spring, locked/seized threading rollers, or broken threading roller springs.
+* **Solution:** Adjust threading roller pressure, set the head to the correct height, replace broken springs, or manually check, dismount, clean, and lubricate locked threading rollers.
+
+
+* **The cap is too little or not seamed**
+* **Cause:** Incorrect seaming roller head height, insufficient seaming roller pressure, or broken seaming roller springs.
+* **Solution:** Adjust the height and pressure of the seaming rollers, or replace broken seaming roller springs.
+
+
+* **The cap is cut on the thread**
+* **Cause:** Excessive pressure from the threading rollers or locked/seized threading rollers.
+* **Solution:** Adjust threading roller pressure, or manually check, dismount, clean, and lubricate locked threading rollers.
+
+## PROBLEMS AND SOLUTIONS (Page 89)
+
+* **Problem:** Problems in caps distribution
+* **Cause:** Incorrect cap gripper
+* **Solutions:**
+* Check the height of the head.
+* Check the operating of springs (**M**) of the caps positioning device.
+* Check that the caps positioning device of caps is operating; if not, contact the *Technical Assistance Service*.
+
+*(Page 89)*
+
+
+
+

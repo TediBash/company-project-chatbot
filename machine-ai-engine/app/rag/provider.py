@@ -18,9 +18,16 @@ class RAGPipelineProvider:
         self.reranker = CrossEncoderReRanker()
 
     def ingest_manual(self, file_path: str | Path, serial_number: Optional[str] = None) -> int:
-        """Helper to index a technical manual strictly by its serial number."""
+        """Helper to index a technical manual strictly by its serial number. Supports PDF and TXT."""
         extra_meta = {"serial_number": serial_number} if serial_number else None
-        chunks = self.ingestion.chunk_document(file_path, extra_metadata=extra_meta)
+        path_obj = Path(file_path)
+
+        # Route to the appropriate engine based on file type
+        if path_obj.suffix.lower() in [".txt", ".md"]:
+            chunks = self.ingestion.chunk_markdown_document(path_obj, extra_metadata=extra_meta)
+        else:
+            chunks = self.ingestion.chunk_document(path_obj, extra_metadata=extra_meta)
+            
         return self.vector_store.add_chunks(chunks)
 
     def retrieve_context(

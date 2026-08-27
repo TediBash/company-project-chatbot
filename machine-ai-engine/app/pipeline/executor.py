@@ -151,7 +151,9 @@ class CognitiveLoopExecutor:
                     "docs_retrieved": len(rag_docs)
                 })
 
+
             final_draft_text = ""
+            last_draft = ""  # Tracks the best available draft in case of QA failure
             
             # 5. Cognitive Loop
             while self.iteration_count < active_pipeline.budget.max_iterations_per_answer:
@@ -169,6 +171,9 @@ class CognitiveLoopExecutor:
                 draft_text = ""
                 async for chunk in response_obj:
                     draft_text += chunk
+                
+                # Save the current draft so we have it if the loop fails
+                last_draft = draft_text
                     
                 tracer.add_llm_step(
                     step_name=f"Agent Drafting (Iter {self.iteration_count})",
@@ -216,9 +221,17 @@ class CognitiveLoopExecutor:
                     context["messages"].append({"role": "assistant", "content": draft_text})
                     context["messages"].append({"role": "user", "content": f"SYSTEM FEEDBACK: Your draft was rejected: {feedback_msg}. Rewrite your response to fix this."})
                     
+            # =================================================================
+            # 🛑 FALLBACK LOGIC (Graceful Degradation)
+            # =================================================================
             if not final_draft_text:
-                if self.iteration_count >= active_pipeline.budget.max_iterations_per_answer:
-                    final_draft_text = "I apologize, but I reached my maximum internal reasoning budget trying to verify this answer. Please rephrase your question or be more specific."
+                if self.iteration_count >= active_pipeline.budget.max_iterations_per_answer and last_draft:
+                    fallback_warning = (
+                        "⚠️ **System Notice: This response could not be fully verified against our strict "
+                        "citation and safety guidelines. It may contain incomplete references or inaccuracies. "
+                        "Please proceed with caution and consult the physical manual.**\n\n"
+                    )
+                    final_draft_text = fallback_warning + last_draft
                 else:
                     final_draft_text = "I am unable to generate a response that passes our safety and accuracy validations."
 
