@@ -230,18 +230,36 @@ export const deleteRequest = async (req, res) => {
 };
 
 export const getSparePartsCatalog = async (req, res) => {
+  const companyId = req.tenant.companyId;
+  const { machineId } = req.query;
+
   try {
-    const sql = `
+    // Join through quote_revisions and quotes to verify tenant ownership
+    let sql = `
       SELECT DISTINCT 
-        item_description AS "partNumber",
-        item_description AS "name",
-        item_description AS "description",
-        price,
+        ql.item_description AS "partNumber",
+        ql.item_description AS "name",
+        ql.item_description AS "description",
+        ql.price,
         0 AS "leadTimeDays"
-      FROM app_commercial.quote_lines
-      LIMIT 50;
+      FROM app_commercial.quote_lines ql
+      JOIN app_commercial.quote_revisions qr ON ql.quote_revision_id = qr.revision_id
+      JOIN app_commercial.quotes q ON qr.quote_id = q.quote_id
+      WHERE q.company_id = $1
     `;
-    const { rows } = await query(sql);
+    const params = [companyId];
+    let paramIndex = 2;
+
+    // Filter by specific machine if provided
+    if (machineId && machineId !== 'Unknown Model') {
+      sql += ` AND ql.machine_id = $${paramIndex}`;
+      params.push(machineId);
+      paramIndex++;
+    }
+
+    sql += ` LIMIT 50;`;
+    
+    const { rows } = await query(sql, params);
     res.json(rows);
   } catch (error) {
     console.error('[Spare Parts GET Error]', error);
@@ -251,7 +269,8 @@ export const getSparePartsCatalog = async (req, res) => {
 
 export const getOrderHistory = async (req, res) => {
   const tenantCompanyId = req.tenant.companyId;
-  const company = req.query.company || tenantCompanyId; // Fallback if empty
+  const company = req.query.companyId || req.query.company || tenantCompanyId;
+  const { machineId } = req.query;
   const isPlatformOwner = req.tenant.isPlatformOwner;
 
   if (!isPlatformOwner && tenantCompanyId !== company) {
@@ -259,7 +278,7 @@ export const getOrderHistory = async (req, res) => {
   }
 
   try {
-    const sql = `
+    let sql = `
       SELECT 
         o.order_id AS "orderId",
         o.order_status AS "orderStatus",
@@ -269,11 +288,26 @@ export const getOrderHistory = async (req, res) => {
       FROM app_commercial.orders o
       LEFT JOIN app_commercial.order_lines ol ON o.order_id = ol.order_id
       WHERE o.company_id = $1
+    `;
+    const params = [company];
+    let paramIndex = 2;
+
+    // Filter to only show orders that contain parts for this specific machine
+    if (machineId) {
+      sql += ` AND EXISTS (
+        SELECT 1 FROM app_commercial.order_lines ol2 
+        WHERE ol2.order_id = o.order_id AND ol2.machine_id = $${paramIndex}
+      )`;
+      params.push(machineId);
+      paramIndex++;
+    }
+
+    sql += `
       GROUP BY o.order_id
       ORDER BY o.created_at DESC
       LIMIT 10;
     `;
-    const { rows } = await query(sql, [company]);
+    const { rows } = await query(sql, params);
     res.json(rows);
   } catch (error) {
     console.error('[Order History GET Error]', error);
@@ -336,5 +370,32 @@ export const getMachineQuotations = async (req, res) => {
   } catch (error) {
     console.error('[Quotations Error]', error);
     res.status(500).json({ message: 'Failed to fetch quotations.' });
+  }
+};
+
+export const getMachineOrderLines = async (req, res) => {
+  const { machineId } = req.params;
+  const companyId = req.tenant.companyId;
+
+  try {
+    const sql = `
+      SELECT 
+        o.order_id AS "orderId",
+        o.order_status AS "orderStatus",
+        o.created_at AS "orderDate",
+        ol.line_id AS "lineId",
+        ol.item_description AS "itemDescription",
+        ol.fulfillment_status AS "fulfillmentStatus"
+      FROM app_commercial.orders o
+      JOIN app_commercial.order_lines ol ON o.order_id = ol.order_id
+      WHERE ol.machine_id = $1 AND o.company_id = $2
+      ORDER BY o.created_at DESC
+      LIMIT 20;
+    `;
+    const { rows } = await query(sql, [machineId, companyId]);
+    res.json(rows);
+  } catch (error) {
+    console.error('[Machine Order Lines Error]', error);
+    res.status(500).json({ message: 'Failed to fetch machine order lines.' });
   }
 };

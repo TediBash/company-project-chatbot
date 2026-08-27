@@ -1,6 +1,8 @@
 # app/tools/commercial.py
 import os
 import json
+
+import urllib.parse
 import httpx
 
 # Set this to where your Node.js API is running
@@ -29,11 +31,9 @@ async def _make_api_call(endpoint: str, auth_token: str) -> dict | str:
 # COMMERCIAL TOOLS
 # ---------------------------------------------------------
 
-async def get_spare_parts_catalog(machine_model: str, auth_token: str) -> str:
-    """
-    Retrieves the available spare parts and pricing for a specific machine model.
-    """
-    result = await _make_api_call(f"/commercial/parts?model={machine_model}", auth_token)
+async def get_spare_parts_catalog(machine_id: str, auth_token: str) -> str:
+    """Retrieves the available spare parts and pricing for a specific machine asset."""
+    result = await _make_api_call(f"/commercial/parts?machineId={machine_id}", auth_token)
     return json.dumps(result, indent=2)
 
 async def get_order_history(company_id: str, auth_token: str) -> str:
@@ -51,4 +51,61 @@ async def get_purchase_details(machine_id: str, auth_token: str) -> str:
 async def get_quotation_history(machine_id: str, auth_token: str) -> str:
     """Gets the recent quote revisions to track changes in price or discount."""
     result = await _make_api_call(f"/commercial/machines/{machine_id}/quotations", auth_token)
+    return json.dumps(result, indent=2)
+
+async def query_filtered_quotes(
+    auth_token: str, 
+    company_id: str = None, 
+    machine_id: str = None, 
+    has_order: bool = None, 
+    status: str = None
+) -> str:
+    """Fetches quotes based on highly specific filters."""
+    params = {}
+    if company_id: params['companyId'] = company_id
+    if machine_id: params['machineId'] = machine_id
+    if has_order is True: params['hasOrder'] = 'true'
+    if status: params['status'] = status
+
+    query_string = urllib.parse.urlencode(params)
+    endpoint = f"/quotes?{query_string}" if query_string else "/quotes"
+    
+    result = await _make_api_call(endpoint, auth_token)
+    return json.dumps(result, indent=2)
+
+async def query_filtered_orders(
+    auth_token: str, 
+    company_id: str = None, 
+    machine_id: str = None
+) -> str:
+    """Fetches orders filtered by company and/or specific machine assets."""
+    params = {}
+    if company_id: params['companyId'] = company_id
+    if machine_id: params['machineId'] = machine_id
+
+    query_string = urllib.parse.urlencode(params)
+    endpoint = f"/orders?{query_string}" if query_string else "/orders"
+    
+    result = await _make_api_call(endpoint, auth_token)
+    return json.dumps(result, indent=2)
+
+async def get_machine_financials(machine_id: str, auth_token: str) -> str:
+    """Retrieves the original purchase cost, delivery date, and lifecycle financial data."""
+    if not machine_id:
+        return json.dumps({"error": "Machine ID is required for financials."})
+    result = await _make_api_call(f"/commercial/machines/{machine_id}/financials", auth_token)
+    return json.dumps(result, indent=2)
+
+# Remove get_spare_parts_catalog entirely.
+
+async def get_machine_quotations(machine_id: str, auth_token: str) -> str:
+    """Gets detailed quote revisions and quote lines for the active machine."""
+    if not machine_id: return "{}"
+    result = await _make_api_call(f"/commercial/machines/{machine_id}/quotations", auth_token)
+    return json.dumps(result, indent=2)
+
+async def get_machine_order_lines(machine_id: str, auth_token: str) -> str:
+    """Gets detailed order lines and fulfillment statuses for the active machine."""
+    if not machine_id: return "{}"
+    result = await _make_api_call(f"/commercial/machines/{machine_id}/order-lines", auth_token)
     return json.dumps(result, indent=2)

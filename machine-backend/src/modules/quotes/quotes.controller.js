@@ -7,7 +7,7 @@ import { query } from '../../config/db.js';
 
 // GET /api/quotes
 export const getQuotes = async (req, res) => {
-  const { search, page = 1, limit = 25 } = req.query;
+  const { search, machineId, status, page = 1, limit = 25 } = req.query;
   const offset = (page - 1) * limit;
 
   // Enforce Tenant Isolation
@@ -27,6 +27,19 @@ export const getQuotes = async (req, res) => {
       paramIndex++;
     }
 
+    if (machineId) {
+      // Requires a JOIN or EXISTS subquery to check quote_lines
+      whereClause += ` AND EXISTS(SELECT 1 FROM app_commercial.quote_revisions qr JOIN app_commercial.quote_lines ql ON qr.revision_id = ql.quote_revision_id WHERE qr.quote_id = q.quote_id AND ql.machine_id = $${paramIndex})`;
+      params.push(machineId);
+      paramIndex++;
+    }
+
+    if (status) {
+      whereClause += ` AND EXISTS(SELECT 1 FROM app_commercial.quote_revisions qr WHERE qr.quote_id = q.quote_id AND qr.revision_status = $${paramIndex})`;
+      params.push(status);
+      paramIndex++;
+    }
+
     if (req.query.validity === 'active') {
       whereClause += ` AND valid_until >= CURRENT_DATE`;
     } else if (req.query.validity === 'expired') {
@@ -34,7 +47,7 @@ export const getQuotes = async (req, res) => {
     }
 
     // 1. Get Total Count for Pagination Metadata
-    const countSql = `SELECT COUNT(quote_id) AS total FROM app_commercial.quotes ${whereClause}`;
+    const countSql = `SELECT COUNT(quote_id) AS total FROM app_commercial.quotes q ${whereClause}`;
     const countRes = await query(countSql, params);
     const totalRecords = parseInt(countRes.rows[0].total) || 0;
 

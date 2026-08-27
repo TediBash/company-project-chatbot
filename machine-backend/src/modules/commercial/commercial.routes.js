@@ -9,7 +9,8 @@ import {
   getMachinePurchaseDetails,
   getMachineQuotations,
   getSparePartsCatalog,
-  getOrderHistory
+  getOrderHistory,
+  getMachineOrderLines
 } from './commercial.controller.js';
 import { requireAuth, requireRole } from '../../middleware/authMiddleware.js';
 
@@ -28,5 +29,6 @@ router.get('/parts', requireRole(['full', 'commercial']), getSparePartsCatalog);
 router.get('/orders', requireRole(['full', 'commercial']), getOrderHistory);
 router.get('/machines/:machineId/purchase-details', requireRole(['full', 'commercial']), getMachinePurchaseDetails);
 router.get('/machines/:machineId/quotations', requireRole(['full', 'commercial']), getMachineQuotations);
+router.get('/machines/:machineId/order-lines', requireRole(['full', 'commercial']),getMachineOrderLines);
 
 export default router;
