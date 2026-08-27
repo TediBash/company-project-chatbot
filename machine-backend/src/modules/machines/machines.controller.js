@@ -2,7 +2,10 @@
 import { query } from '../../config/db.js';
 
 export const getCompanyMachines = async (req, res) => {
-  const companyId = req.tenant.companyId;
+  // Allow Platform Owner to override the companyId via query parameters
+  const companyId = req.tenant.isPlatformOwner && req.query.companyId 
+    ? req.query.companyId 
+    : req.tenant.companyId;
 
   try {
     const sql = `

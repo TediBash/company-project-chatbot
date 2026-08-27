@@ -1,4 +1,3 @@
-// src/api/routes/quotes.routes.js
 import { Router } from 'express';
 import { 
   getQuotes,
@@ -13,29 +12,30 @@ import {
   updateLineItem,
   deleteLineItem
 } from './quotes.controller.js';
-import { requireAuth, requireRole } from '../../middleware/authMiddleware.js';
+import { requireAuth, requireRole, requirePlatformOwner } from '../../middleware/authMiddleware.js';
 
 const router = Router();
 
-// Apply Authentication to all quote routes
+// Apply Authentication and basic Role check to ALL quote routes (allows reading)
 router.use(requireAuth);
-// Restrict access strictly to Commercial team and Admins
 router.use(requireRole(['full', 'commercial']));
 
 // 1. Quote Core Routes
 router.get('/', getQuotes);
-router.post('/', createQuote);
 router.get('/:id', getQuoteDetails);
-router.put('/:id', updateQuote);
-router.delete('/:id', deleteQuote);
 
-// 2. Revisions & Line Items
-router.post('/:id/revisions', createRevision);
-router.put('/revisions/:revisionId', updateRevision);
-router.delete('/revisions/:revisionId', deleteRevision);
+// Protected Core Mutations
+router.post('/', requirePlatformOwner, createQuote);
+router.put('/:id', requirePlatformOwner, updateQuote);
+router.delete('/:id', requirePlatformOwner, deleteQuote);
 
-router.post('/revisions/:revisionId/lines', createLineItem);
-router.put('/lines/:lineId', updateLineItem);
-router.delete('/lines/:lineId', deleteLineItem);
+// 2. Revisions & Line Items Mutations (Protected)
+router.post('/:id/revisions', requirePlatformOwner, createRevision);
+router.put('/revisions/:revisionId', requirePlatformOwner, updateRevision);
+router.delete('/revisions/:revisionId', requirePlatformOwner, deleteRevision);
+
+router.post('/revisions/:revisionId/lines', requirePlatformOwner, createLineItem);
+router.put('/lines/:lineId', requirePlatformOwner, updateLineItem);
+router.delete('/lines/:lineId', requirePlatformOwner, deleteLineItem);
 
 export default router;

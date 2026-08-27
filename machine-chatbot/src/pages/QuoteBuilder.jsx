@@ -4,10 +4,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { DynamicTable } from '../components/ui/DynamicTable';
 import { BaseModal } from '../components/ui/BaseModal';
+import { jwtDecode } from 'jwt-decode';
 
 export const QuoteBuilderPage = () => {
   const { id } = useParams(); // The Parent Quote ID
   const navigate = useNavigate();
+
+  // Decode Token to check permissions
+  let isPlatformOwner = false;
+  const token = localStorage.getItem('arol_token');
+  if (token) {
+    try {
+      isPlatformOwner = jwtDecode(token).tenant?.isPlatformOwner === true;
+    } catch (e) {}
+  }
 
   // Data States
   const [quote, setQuote] = useState(null);
@@ -30,16 +40,16 @@ export const QuoteBuilderPage = () => {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [quoteRes, machinesRes] = await Promise.all([
-        apiClient.get(`/quotes/${id}`),
-        apiClient.get('/machines') // Standard endpoint for dropdowns
-      ]);
-      
+      // Step A: Fetch the Quote first so we know which company it belongs to
+      const quoteRes = await apiClient.get(`/quotes/${id}`);
       const quoteData = quoteRes.data;
       setQuote(quoteData);
+
+      // Step B: Fetch machines specifically for the Quote's target company
+      const machinesRes = await apiClient.get(`/machines?companyId=${quoteData.companyId}`);
       setMachines(machinesRes.data || []);
 
-      // Auto-select the most recent revision if none is selected
+      // Step C: Auto-select the most recent revision if none is selected
       if (quoteData.revisions?.length > 0 && !activeRevisionId) {
         setActiveRevisionId(quoteData.revisions[0].id);
       }
@@ -119,7 +129,7 @@ export const QuoteBuilderPage = () => {
       setLineForm({
         machineId: line.machineId || '',
         price: line.price,
-        description: line.description || ''
+        description: line.item_description || line.description || '' 
       });
     } else {
       setLineForm({ machineId: '', price: 0, description: '' });
@@ -174,6 +184,7 @@ export const QuoteBuilderPage = () => {
   const discountAmount = subTotal * (activeRevision?.discountRate || 0);
   const finalTotal = subTotal - discountAmount;
 
+  // Base columns visible to everyone
   const lineColumns = [
     {
       key: 'description',
@@ -197,8 +208,12 @@ export const QuoteBuilderPage = () => {
           {currencySymbol} {Number(row.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
         </span>
       )
-    },
-    {
+    }
+  ];
+
+  // Append actions column ONLY for Platform Owners
+  if (isPlatformOwner) {
+    lineColumns.push({
       key: 'actions',
       label: 'Actions',
       render: (_, row) => (
@@ -207,8 +222,8 @@ export const QuoteBuilderPage = () => {
           <button onClick={() => handleDeleteLine(row.id)} className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:opacity-80">Remove</button>
         </div>
       )
-    }
-  ];
+    });
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -226,10 +241,12 @@ export const QuoteBuilderPage = () => {
       {/* 1. MASTER HEADER */}
       <header className="shrink-0 mb-6 flex justify-between items-start border-b border-gray-200 pb-6">
         <div>
-          <button onClick={() => navigate('/quotes')} className="text-xs font-bold text-gray-400 hover:text-[var(--color-tenant-primary)] uppercase tracking-widest mb-4 flex items-center gap-1">
+          <button onClick={() => navigate('/quotes')} className="text-xs font-bold text-gray-400 hover:text-[var(--color-tenant-primary)] uppercase tracking-widest mb-4 flex items-center gap-1 transition-colors">
             &larr; Back to Quotes
           </button>
-          <h1 className="text-3xl font-light text-gray-900 leading-tight">Quote Builder</h1>
+          <h1 className="text-3xl font-light text-gray-900 leading-tight">
+            {isPlatformOwner ? 'Quote Builder' : 'Quote Details'}
+          </h1>
           <p className="text-sm font-medium text-gray-500 mt-1">{quote.description}</p>
         </div>
         <div className="text-right">
@@ -245,9 +262,11 @@ export const QuoteBuilderPage = () => {
         <div className="w-80 shrink-0 flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
           <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
             <h2 className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-500">Revisions</h2>
-            <button onClick={() => openRevModal()} className="text-[10px] uppercase font-bold text-[var(--color-tenant-primary)] hover:opacity-80 tracking-widest">
-              + New Rev
-            </button>
+            {isPlatformOwner && (
+              <button onClick={() => openRevModal()} className="text-[10px] uppercase font-bold text-[var(--color-tenant-primary)] hover:opacity-80 tracking-widest transition-opacity">
+                + New Rev
+              </button>
+            )}
           </div>
           
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -270,7 +289,9 @@ export const QuoteBuilderPage = () => {
                 <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{rev.changeSummary || 'No change summary provided.'}</p>
                 <div className="mt-3 flex justify-between items-center text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
                   <span>{new Date(rev.issuedAt).toLocaleDateString()}</span>
-                  <button onClick={(e) => { e.stopPropagation(); openRevModal(rev); }} className="hover:text-[var(--color-tenant-primary)]">Edit Setup</button>
+                  {isPlatformOwner && (
+                    <button onClick={(e) => { e.stopPropagation(); openRevModal(rev); }} className="hover:text-[var(--color-tenant-primary)] transition-colors">Edit Setup</button>
+                  )}
                 </div>
               </div>
             ))}
@@ -280,7 +301,7 @@ export const QuoteBuilderPage = () => {
         {/* 3. RIGHT CONTENT: LINE ITEMS FOR ACTIVE REVISION */}
         <div className="flex-1 flex flex-col min-h-0 bg-white border border-gray-200 rounded-xl shadow-sm">
           {!activeRevision ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-gray-400">Select or create a revision to manage items.</div>
+            <div className="flex-1 flex items-center justify-center text-sm text-gray-400">Select a revision to view items.</div>
           ) : (
             <>
               {/* Revision Header */}
@@ -289,9 +310,11 @@ export const QuoteBuilderPage = () => {
                   <h2 className="text-lg font-semibold text-gray-900">Revision {activeRevision.revisionNumber} Lines</h2>
                   <p className="text-sm text-gray-500 mt-1 max-w-2xl">{activeRevision.changeSummary}</p>
                 </div>
-                <button onClick={() => openLineModal()} className="px-6 py-2 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase tracking-wider shadow-sm">
-                  + Add Line Item
-                </button>
+                {isPlatformOwner && (
+                  <button onClick={() => openLineModal()} className="px-6 py-2 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase tracking-wider shadow-sm transition-opacity">
+                    + Add Line Item
+                  </button>
+                )}
               </div>
 
               {/* Lines Table */}
@@ -320,74 +343,75 @@ export const QuoteBuilderPage = () => {
       </div>
 
       {/* ========================================== */}
-      {/* MODAL: REVISION FORM */}
+      {/* MODALS (Only Accessible to Platform Owners) */}
       {/* ========================================== */}
-      <BaseModal isOpen={isRevModalOpen} onClose={() => setIsRevModalOpen(false)} title={selectedRev ? "Update Revision" : "Create New Revision"}>
-        <form onSubmit={handleSaveRev} className="space-y-6">
-          <div className="grid grid-cols-3 gap-6">
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Rev Number</label>
-              <input type="number" required min="1" value={revForm.revisionNumber} onChange={e => setRevForm({...revForm, revisionNumber: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" />
+      {isPlatformOwner && isRevModalOpen && (
+        <BaseModal isOpen={true} onClose={() => setIsRevModalOpen(false)} title={selectedRev ? "Update Revision" : "Create New Revision"}>
+          <form onSubmit={handleSaveRev} className="space-y-6">
+            <div className="grid grid-cols-3 gap-6">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Rev Number</label>
+                <input type="number" required min="1" value={revForm.revisionNumber} onChange={e => setRevForm({...revForm, revisionNumber: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Status</label>
+                <select value={revForm.revisionStatus} onChange={e => setRevForm({...revForm, revisionStatus: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]">
+                  <option value="Draft">Draft</option>
+                  <option value="Submitted">Submitted (To Client)</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                  <option value="Superseded">Superseded</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Discount (%)</label>
+                <input type="number" required min="0" max="100" step="0.1" value={revForm.discountRate} onChange={e => setRevForm({...revForm, discountRate: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" />
+              </div>
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Status</label>
-              <select value={revForm.revisionStatus} onChange={e => setRevForm({...revForm, revisionStatus: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]">
-                <option value="Draft">Draft</option>
-                <option value="Submitted">Submitted (To Client)</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Superseded">Superseded</option>
-              </select>
+              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Change Summary</label>
+              <textarea rows="3" value={revForm.changeSummary} onChange={e => setRevForm({...revForm, changeSummary: e.target.value})} className="w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Discount (%)</label>
-              <input type="number" required min="0" max="100" step="0.1" value={revForm.discountRate} onChange={e => setRevForm({...revForm, discountRate: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" />
+            <div className="pt-4 flex justify-between gap-3 border-t border-gray-100">
+              {selectedRev ? <button type="button" onClick={handleDeleteRev} className="px-5 py-2.5 text-xs font-bold text-red-500 uppercase hover:bg-red-50 rounded-md">Delete Rev</button> : <div></div>}
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setIsRevModalOpen(false)} className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase">Save Rev</button>
+              </div>
             </div>
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Change Summary</label>
-            <textarea rows="3" value={revForm.changeSummary} onChange={e => setRevForm({...revForm, changeSummary: e.target.value})} className="w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" />
-          </div>
-          <div className="pt-4 flex justify-between gap-3 border-t border-gray-100">
-            {selectedRev ? <button type="button" onClick={handleDeleteRev} className="px-5 py-2.5 text-xs font-bold text-red-500 uppercase hover:bg-red-50 rounded-md">Delete Rev</button> : <div></div>}
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setIsRevModalOpen(false)} className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
-              <button type="submit" className="px-5 py-2.5 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase">Save Rev</button>
-            </div>
-          </div>
-        </form>
-      </BaseModal>
+          </form>
+        </BaseModal>
+      )}
 
-      {/* ========================================== */}
-      {/* MODAL: LINE ITEM FORM */}
-      {/* ========================================== */}
-      <BaseModal isOpen={isLineModalOpen} onClose={() => setIsLineModalOpen(false)} title={selectedLine ? "Edit Line Item" : "Add Line Item"}>
-        <form onSubmit={handleSaveLine} className="space-y-6">
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Item Description</label>
-            <textarea required rows="2" value={lineForm.description} onChange={e => setLineForm({...lineForm, description: e.target.value})} className="w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" />
-          </div>
-          <div className="grid grid-cols-2 gap-6">
+      {isPlatformOwner && isLineModalOpen && (
+        <BaseModal isOpen={true} onClose={() => setIsLineModalOpen(false)} title={selectedLine ? "Edit Line Item" : "Add Line Item"}>
+          <form onSubmit={handleSaveLine} className="space-y-6">
             <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Target Machine</label>
-              <select value={lineForm.machineId} onChange={e => setLineForm({...lineForm, machineId: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm bg-white focus:outline-none focus:border-[var(--color-tenant-primary)]">
-                <option value="">-- General Supply / No Asset --</option>
-                {machines.map(m => (
-                  <option key={m.id} value={m.id}>{m.serialNumber} - {m.modelDescription}</option>
-                ))}
-              </select>
+              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Item Description</label>
+              <textarea required rows="2" value={lineForm.description} onChange={e => setLineForm({...lineForm, description: e.target.value})} className="w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Price ({currencySymbol})</label>
-              <input type="number" required min="0" step="0.01" value={lineForm.price} onChange={e => setLineForm({...lineForm, price: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" />
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Target Machine</label>
+                <select value={lineForm.machineId} onChange={e => setLineForm({...lineForm, machineId: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm bg-white focus:outline-none focus:border-[var(--color-tenant-primary)]">
+                  <option value="">-- General Supply / No Asset --</option>
+                  {machines.map(m => (
+                    <option key={m.id} value={m.id}>{m.serialNumber} - {m.modelDescription}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Price ({currencySymbol})</label>
+                <input type="number" required min="0" step="0.01" value={lineForm.price} onChange={e => setLineForm({...lineForm, price: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-[var(--color-tenant-primary)]" />
+              </div>
             </div>
-          </div>
-          <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
-            <button type="button" onClick={() => setIsLineModalOpen(false)} className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
-            <button type="submit" className="px-5 py-2.5 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase">Save Item</button>
-          </div>
-        </form>
-      </BaseModal>
+            <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
+              <button type="button" onClick={() => setIsLineModalOpen(false)} className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
+              <button type="submit" className="px-5 py-2.5 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase">Save Item</button>
+            </div>
+          </form>
+        </BaseModal>
+      )}
 
     </div>
   );

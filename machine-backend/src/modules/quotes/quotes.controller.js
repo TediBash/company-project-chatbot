@@ -97,17 +97,28 @@ export const getQuotes = async (req, res) => {
 export const getQuoteDetails = async (req, res) => {
   const { id } = req.params;
   const companyId = req.tenant.companyId;
+  const isPlatformOwner = req.tenant.isPlatformOwner;
 
   try {
-    // 1. Fetch Quote
-    const quoteSql = `
-      SELECT quote_id AS "id", currency, created_at AS "createdAt", 
-             valid_until AS "validUntil", description 
-      FROM app_commercial.quotes 
-      WHERE quote_id = $1 AND company_id = $2
-    `;
-    const quoteRes = await query(quoteSql, [id, companyId]);
-    if (quoteRes.rows.length === 0) return res.status(404).json({ message: 'Quote not found.' });
+    // 1. Fetch Quote (Bypass company_id strict check for Platform Owners)
+    const quoteSql = isPlatformOwner 
+      ? `
+        SELECT quote_id AS "id", company_id AS "companyId", currency, created_at AS "createdAt", 
+               valid_until AS "validUntil", description 
+        FROM app_commercial.quotes 
+        WHERE quote_id = $1
+      `
+      : `
+        SELECT quote_id AS "id", company_id AS "companyId", currency, created_at AS "createdAt", 
+               valid_until AS "validUntil", description 
+        FROM app_commercial.quotes 
+        WHERE quote_id = $1 AND company_id = $2
+      `;
+      
+    const params = isPlatformOwner ? [id] : [id, companyId];
+    const quoteRes = await query(quoteSql, params);
+    
+    if (quoteRes.rows.length === 0) return res.status(404).json({ message: 'Quote not found or access denied.' });
 
     // 2. Fetch Revisions
     const revSql = `
@@ -153,10 +164,12 @@ export const getQuoteDetails = async (req, res) => {
   }
 };
 
+
 // POST /api/quotes
 export const createQuote = async (req, res) => {
-  const { currency, validUntil, description } = req.body;
-  const companyId = req.tenant.companyId;
+  const { companyId, currency, validUntil, description } = req.body;
+  
+  if (!companyId) return res.status(400).json({ message: 'Company ID is required.' });
 
   try {
     const sql = `
@@ -176,17 +189,16 @@ export const createQuote = async (req, res) => {
 export const updateQuote = async (req, res) => {
   const { id } = req.params;
   const { currency, validUntil, description } = req.body;
-  const companyId = req.tenant.companyId;
 
   try {
     const sql = `
       UPDATE app_commercial.quotes 
       SET currency = $1, valid_until = $2, description = $3
-      WHERE quote_id = $4 AND company_id = $5
+      WHERE quote_id = $4
       RETURNING quote_id AS "id"
     `;
-    const { rows } = await query(sql, [currency, validUntil, description, id, companyId]);
-    if (rows.length === 0) return res.status(404).json({ message: 'Quote not found or access denied.' });
+    const { rows } = await query(sql, [currency, validUntil, description, id]);
+    if (rows.length === 0) return res.status(404).json({ message: 'Quote not found.' });
     
     res.json({ message: 'Quote updated successfully.' });
   } catch (error) {
@@ -198,13 +210,12 @@ export const updateQuote = async (req, res) => {
 // DELETE /api/quotes/:id
 export const deleteQuote = async (req, res) => {
   const { id } = req.params;
-  const companyId = req.tenant.companyId;
 
   try {
-    const sql = `DELETE FROM app_commercial.quotes WHERE quote_id = $1 AND company_id = $2 RETURNING quote_id`;
-    const { rows } = await query(sql, [id, companyId]);
+    const sql = `DELETE FROM app_commercial.quotes WHERE quote_id = $1 RETURNING quote_id`;
+    const { rows } = await query(sql, [id]);
     
-    if (rows.length === 0) return res.status(404).json({ message: 'Quote not found or access denied.' });
+    if (rows.length === 0) return res.status(404).json({ message: 'Quote not found.' });
     res.json({ message: 'Quote deleted successfully.' });
   } catch (error) {
     console.error('[DELETE Quote Error]', error);
@@ -221,13 +232,8 @@ export const deleteQuote = async (req, res) => {
 export const createRevision = async (req, res) => {
   const { id: quoteId } = req.params;
   const { revisionNumber, revisionStatus, discountRate, changeSummary } = req.body;
-  const companyId = req.tenant.companyId;
 
   try {
-    // Security check: ensure quote belongs to tenant
-    const checkRes = await query(`SELECT quote_id FROM app_commercial.quotes WHERE quote_id = $1 AND company_id = $2`, [quoteId, companyId]);
-    if (checkRes.rows.length === 0) return res.status(404).json({ message: 'Quote not found.' });
-
     const sql = `
       INSERT INTO app_commercial.quote_revisions (quote_id, revision_number, revision_status, discount_rate, change_summary)
       VALUES ($1, $2, $3, $4, $5)
@@ -245,24 +251,19 @@ export const createRevision = async (req, res) => {
 export const updateRevision = async (req, res) => {
   const { revisionId } = req.params;
   const { revisionNumber, revisionStatus, discountRate, changeSummary } = req.body;
-  const companyId = req.tenant.companyId;
 
   try {
-    // Security check: Join with quotes to verify tenant ownership
     const sql = `
-      UPDATE app_commercial.quote_revisions qr
+      UPDATE app_commercial.quote_revisions
       SET revision_number = $1, revision_status = $2, discount_rate = $3, change_summary = $4
-      FROM app_commercial.quotes q
-      WHERE qr.quote_id = q.quote_id 
-        AND qr.revision_id = $5 
-        AND q.company_id = $6
-      RETURNING qr.revision_id AS "id", qr.revision_status AS "revisionStatus"
+      WHERE revision_id = $5 
+      RETURNING revision_id AS "id", revision_status AS "revisionStatus"
     `;
     
-    const { rows } = await query(sql, [revisionNumber, revisionStatus, discountRate, changeSummary, revisionId, companyId]);
+    const { rows } = await query(sql, [revisionNumber, revisionStatus, discountRate, changeSummary, revisionId]);
     
     if (rows.length === 0) {
-      return res.status(404).json({ message: 'Revision not found or access denied.' });
+      return res.status(404).json({ message: 'Revision not found.' });
     }
     
     res.json({ message: 'Revision updated successfully.', data: rows[0] });
@@ -275,23 +276,13 @@ export const updateRevision = async (req, res) => {
 // DELETE /api/quotes/revisions/:revisionId
 export const deleteRevision = async (req, res) => {
   const { revisionId } = req.params;
-  const companyId = req.tenant.companyId;
 
   try {
-    // Security check: Join with quotes to verify tenant ownership
-    const sql = `
-      DELETE FROM app_commercial.quote_revisions qr
-      USING app_commercial.quotes q
-      WHERE qr.quote_id = q.quote_id
-        AND qr.revision_id = $1 
-        AND q.company_id = $2
-      RETURNING qr.revision_id
-    `;
-    
-    const { rows } = await query(sql, [revisionId, companyId]);
+    const sql = `DELETE FROM app_commercial.quote_revisions WHERE revision_id = $1 RETURNING revision_id`;
+    const { rows } = await query(sql, [revisionId]);
     
     if (rows.length === 0) {
-      return res.status(404).json({ message: 'Revision not found or access denied.' });
+      return res.status(404).json({ message: 'Revision not found.' });
     }
     
     res.json({ message: 'Revision deleted successfully.' });
@@ -305,8 +296,6 @@ export const deleteRevision = async (req, res) => {
 export const createLineItem = async (req, res) => {
   const { revisionId } = req.params;
   const { machineId, price, description } = req.body;
-  console.log('[DEBUG] createLineItem (req.body):', JSON.stringify(req.body, null, 2));
-  console.log('[DEBUG] revisionId:', revisionId);
 
   try {
     const sql = `
@@ -322,33 +311,23 @@ export const createLineItem = async (req, res) => {
   }
 };
 
-// ==========================================
-// 3. QUOTE LINES CRUD (Expanded)
-// ==========================================
-
 // PUT /api/quotes/lines/:lineId
 export const updateLineItem = async (req, res) => {
   const { lineId } = req.params;
   const { machineId, price, description } = req.body;
-  const companyId = req.tenant.companyId;
 
   try {
-    // Security check: Join through revisions and quotes to verify tenant ownership
     const sql = `
-      UPDATE app_commercial.quote_lines ql
+      UPDATE app_commercial.quote_lines
       SET machine_id = $1, price = $2, item_description = $3
-      FROM app_commercial.quote_revisions qr
-      JOIN app_commercial.quotes q ON qr.quote_id = q.quote_id
-      WHERE ql.quote_revision_id = qr.revision_id 
-        AND ql.line_id = $4 
-        AND q.company_id = $5
-      RETURNING ql.line_id AS "id", ql.machine_id AS "machineId", ql.price, ql.item_description
+      WHERE line_id = $4 
+      RETURNING line_id AS "id", machine_id AS "machineId", price, item_description
     `;
     
-    const { rows } = await query(sql, [machineId || null, price, description, lineId, companyId]);
+    const { rows } = await query(sql, [machineId || null, price, description, lineId]);
     
     if (rows.length === 0) {
-      return res.status(404).json({ message: 'Quote line not found or access denied.' });
+      return res.status(404).json({ message: 'Quote line not found.' });
     }
     
     res.json({ message: 'Quote line updated successfully.', data: rows[0] });
@@ -361,24 +340,13 @@ export const updateLineItem = async (req, res) => {
 // DELETE /api/quotes/lines/:lineId
 export const deleteLineItem = async (req, res) => {
   const { lineId } = req.params;
-  const companyId = req.tenant.companyId;
 
   try {
-    // Security check: Join through revisions and quotes to verify tenant ownership
-    const sql = `
-      DELETE FROM app_commercial.quote_lines ql
-      USING app_commercial.quote_revisions qr, app_commercial.quotes q
-      WHERE ql.quote_revision_id = qr.revision_id 
-        AND qr.quote_id = q.quote_id
-        AND ql.line_id = $1 
-        AND q.company_id = $2
-      RETURNING ql.line_id
-    `;
-    
-    const { rows } = await query(sql, [lineId, companyId]);
+    const sql = `DELETE FROM app_commercial.quote_lines WHERE line_id = $1 RETURNING line_id`;
+    const { rows } = await query(sql, [lineId]);
     
     if (rows.length === 0) {
-      return res.status(404).json({ message: 'Quote line not found or access denied.' });
+      return res.status(404).json({ message: 'Quote line not found.' });
     }
     
     res.json({ message: 'Quote line deleted successfully.' });

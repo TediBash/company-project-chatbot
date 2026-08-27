@@ -146,7 +146,11 @@ export const QuotesPage = () => {
       name: 'companyId', type: 'select', className: 'w-48',
       options: [
         { value: '', label: 'All Companies' },
-        ...options.companies.map(c => ({ value: c.id, label: c.name }))
+        // Safely extract the name regardless of backend casing
+        ...options.companies.map(c => ({ 
+          value: c.id || c.company_id, 
+          label: c.name || c.companyName || c.company_name || c.id || 'Unknown Company' 
+        }))
       ]
     });
   }
@@ -229,12 +233,14 @@ export const QuotesPage = () => {
       label: 'Actions',
       render: (_, row) => (
         <div className="flex gap-4 items-center">
-          <button 
-            onClick={() => openModal(row)}
-            className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
-          >
-            Edit Info
-          </button>
+          {isPlatformOwner && (
+            <button 
+              onClick={() => openModal(row)}
+              className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+            >
+              Edit Info
+            </button>
+          )}
           <button 
             onClick={() => navigate(`/commercial/quotes/${row.id}`)}
             className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-tenant-primary)] hover:opacity-80 transition-opacity bg-blue-50 px-2 py-1.5 rounded"
@@ -274,12 +280,14 @@ export const QuotesPage = () => {
           values={filters} 
           onChange={handleFilterChange} 
           actionButton={
-            <button 
-              onClick={() => openModal()} 
-              className={`px-6 py-2 text-xs font-bold text-white rounded-md uppercase tracking-wider shadow-sm transition-colors ${isPlatformOwner ? 'bg-gray-900 hover:bg-black' : 'bg-[var(--color-tenant-primary)] hover:opacity-90'}`}
-            >
-              + Create Quote
-            </button>
+            isPlatformOwner ? (
+              <button 
+                onClick={() => openModal()} 
+                className="px-6 py-2 text-xs font-bold text-white rounded-md uppercase tracking-wider shadow-sm transition-colors bg-gray-900 hover:bg-black"
+              >
+                + Create Quote
+              </button>
+            ) : null
           }
         />
       </div>
