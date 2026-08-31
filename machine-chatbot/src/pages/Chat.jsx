@@ -357,7 +357,7 @@ export const ChatPage = () => {
     sendMessageStream(activeSession.session_id || activeSession.id, input);
   };
 
-  const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
+const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
     try {
       setAgentStatus(approved ? 'Executing action...' : 'Cancelling action...');
       setIsProcessing(true);
@@ -371,17 +371,17 @@ export const ChatPage = () => {
       }
 
       const actionType = data?.action || data?.action_type || "create_commercial_request";
-      let actionDetails = data?.details || data?.payload || {};
+      // Dynamically grab whatever payload the AI sent (details for tickets, data for quotes)
+      const actionDetails = data?.details || data?.data || data?.payload || {}; 
       
-      // ---> FIX 1: Extract fields explicitly to the top level of the request <---
       const requestBody = {
         action: actionType,
-        details: actionDetails,
-        machine_id: activeMachineContext?.id || activeSession?.machine_id || '', // Use locked context
+        details: actionDetails, // Send the entire dynamic payload to Python
+        machine_id: activeMachineContext?.id || activeSession?.machine_id || '',
         company_id: activeSession?.company_id || '', 
         approved: approved,
         
-        // Extracting specific ticket fields for Python
+        // Keep these top-level for backward compatibility with your existing Ticket system
         title: actionDetails.title || data?.title || `Request for ${activeMachineContext?.name || 'Machine'}`,
         type: actionDetails.type || data?.type || 'spare_parts',
         urgency: actionDetails.urgency || data?.urgency || 'medium',
@@ -450,9 +450,10 @@ export const ChatPage = () => {
           {actionPayload && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-gray-900">
               <p className="text-[10px] uppercase font-bold text-gray-500 mb-2 tracking-widest">Pending Action</p>
-              <h4 className="font-semibold text-sm mb-1">{actionPayload.action.replace(/_/g, ' ').toUpperCase()}</h4>
-              <p className="text-xs text-gray-600 mb-4 font-mono bg-white p-2 border border-gray-100 rounded">
-                {JSON.stringify(actionPayload.details, null, 2)}
+              <h4 className="font-semibold text-sm mb-1">{actionPayload.action ? actionPayload.action.replace(/_/g, ' ').toUpperCase() : 'ACTION REQUIRED'}</h4>
+              <p className="text-xs text-gray-600 mb-4 font-mono bg-white p-2 border border-gray-100 rounded overflow-x-auto">
+                {/* Dynamically render details OR data depending on what the tool passed */}
+                {JSON.stringify(actionPayload.details || actionPayload.data || actionPayload.payload || {}, null, 2)}
               </p>
               
               {actionPayload.isResolved ? (

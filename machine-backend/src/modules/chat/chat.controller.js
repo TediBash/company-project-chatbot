@@ -222,14 +222,11 @@ export const streamMessage = async (req, res) => {
   }
 };
 
-
-// POST /api/chat/sessions/:id/action
-// Resolves the "Human in the Loop" confirmation
 // POST /api/chat/sessions/:id/action
 // Proxy HITL (Human-in-the-Loop) resolution to Python
 export const confirmAction = async (req, res) => {
   const { id: sessionId } = req.params;
-  const { action, details, approved, machine_id, title, type, urgency, description } = req.body;
+  const rawPayload = req.body; // Take the entire dynamic body
   
   const companyId = req.tenant.companyId;
   const userId = req.user.id;
@@ -238,6 +235,14 @@ export const confirmAction = async (req, res) => {
   try {
     const pythonApiUrl = process.env.PYTHON_API_URL || 'http://127.0.0.1:8000';
     
+    // Inject secure tenant data into whatever payload the frontend sent
+    const pythonPayload = {
+      ...rawPayload,
+      session_id: sessionId,
+      company_id: companyId,
+      user_id: userId
+    };
+
     // Proxy the user's decision to Python
     const pythonResponse = await fetch(`${pythonApiUrl}/api/v1/chat/action`, {
       method: 'POST',
@@ -245,22 +250,12 @@ export const confirmAction = async (req, res) => {
         'Content-Type': 'application/json',
         'Authorization': authHeader
       },
-      body: JSON.stringify({
-        session_id: sessionId,
-        company_id: companyId,
-        user_id: userId,
-        action,
-        details,
-        approved,
-        machine_id,
-        title,
-        type,
-        urgency,
-        description
-      })
+      body: JSON.stringify(pythonPayload)
     });
 
     if (!pythonResponse.ok) {
+      const errText = await pythonResponse.text();
+      console.error('[Action Proxy Failed]', errText);
       return res.status(500).json({ message: 'AI Engine failed to process the action.' });
     }
 

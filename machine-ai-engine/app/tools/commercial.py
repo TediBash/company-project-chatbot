@@ -1,23 +1,31 @@
 # app/tools/commercial.py
 import os
 import json
-
 import urllib.parse
 import httpx
+from datetime import datetime, timedelta
 
 # Set this to where your Node.js API is running
 NODE_API_BASE = os.getenv("NODE_API_BASE", "http://localhost:5000/api")
 
-async def _make_api_call(endpoint: str, auth_token: str) -> dict | str:
-    """Helper function to make authenticated GET requests to the Node backend."""
+async def _make_api_call(endpoint: str, auth_token: str, method: str = "GET", payload: dict = None) -> dict | str:
+    """Helper function to make authenticated requests to the Node backend."""
     if not auth_token:
         return "Authentication token missing. Cannot access secure systems."
         
     async with httpx.AsyncClient() as client:
         headers = {"Authorization": f"Bearer {auth_token}"}
         try:
-            response = await client.get(f"{NODE_API_BASE}{endpoint}", headers=headers)
-            if response.status_code == 200:
+            if method.upper() == "POST":
+                response = await client.post(f"{NODE_API_BASE}{endpoint}", json=payload, headers=headers)
+            elif method.upper() == "PUT":
+                response = await client.put(f"{NODE_API_BASE}{endpoint}", json=payload, headers=headers)
+            elif method.upper() == "DELETE":
+                response = await client.delete(f"{NODE_API_BASE}{endpoint}", headers=headers)
+            else: # Default to GET
+                response = await client.get(f"{NODE_API_BASE}{endpoint}", headers=headers)
+                
+            if response.status_code in (200, 201):
                 return response.json()
             elif response.status_code in (401, 403):
                 return "Access Denied: Your role does not permit this action."
@@ -31,15 +39,8 @@ async def _make_api_call(endpoint: str, auth_token: str) -> dict | str:
 # COMMERCIAL TOOLS
 # ---------------------------------------------------------
 
-async def get_spare_parts_catalog(machine_id: str, auth_token: str) -> str:
-    """Retrieves the available spare parts and pricing for a specific machine asset."""
-    result = await _make_api_call(f"/commercial/parts?machineId={machine_id}", auth_token)
-    return json.dumps(result, indent=2)
-
 async def get_order_history(company_id: str, auth_token: str) -> str:
-    """
-    Retrieves recent commercial orders and their fulfillment status for the tenant.
-    """
+    """Retrieves recent commercial orders and their fulfillment status for the tenant."""
     result = await _make_api_call(f"/commercial/orders?company={company_id}", auth_token)
     return json.dumps(result, indent=2)
 
@@ -96,8 +97,6 @@ async def get_machine_financials(machine_id: str, auth_token: str) -> str:
     result = await _make_api_call(f"/commercial/machines/{machine_id}/financials", auth_token)
     return json.dumps(result, indent=2)
 
-# Remove get_spare_parts_catalog entirely.
-
 async def get_machine_quotations(machine_id: str, auth_token: str) -> str:
     """Gets detailed quote revisions and quote lines for the active machine."""
     if not machine_id: return "{}"
@@ -109,3 +108,74 @@ async def get_machine_order_lines(machine_id: str, auth_token: str) -> str:
     if not machine_id: return "{}"
     result = await _make_api_call(f"/commercial/machines/{machine_id}/order-lines", auth_token)
     return json.dumps(result, indent=2)
+
+# =========================================================
+# MUTATION TOOLS (CREATE QUOTE)
+# =========================================================
+
+async def create_draft_quote(
+    company_id: str,
+    description: str,
+    currency: str,
+    lines: list,
+    auth_token: str
+) -> str:
+    """
+    Programmatically orchestrates the creation of a Quote, an initial Revision, 
+    and the associated Line Items in the Node.js API.
+    """
+    
+    # 1. Generate Quote
+    # Defaults validity to 30 days from today
+    valid_until = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    
+    quote_payload = {
+        "companyId": company_id,
+        "currency": currency,
+        "validUntil": valid_until,
+        "description": description
+    }
+    
+    quote_res = await _make_api_call("/quotes", auth_token, method="POST", payload=quote_payload)
+    
+    # Handle error strings or error dicts from _make_api_call
+    if isinstance(quote_res, str) or ("error" in quote_res if isinstance(quote_res, dict) else False):
+        return json.dumps({"error": quote_res})
+        
+    quote_id = quote_res.get("id")
+
+    # 2. Generate Revision 1
+    rev_payload = {
+        "revisionNumber": 1,
+        "revisionStatus": "Draft",
+        "discountRate": 0,
+        "changeSummary": "Initial Draft created via AI Assistant"
+    }
+    
+    rev_res = await _make_api_call(f"/quotes/{quote_id}/revisions", auth_token, method="POST", payload=rev_payload)
+    
+    if isinstance(rev_res, str) or ("error" in rev_res if isinstance(rev_res, dict) else False):
+        return json.dumps({"error": rev_res})
+        
+    rev_id = rev_res.get("id")
+
+    # 3. Generate Line Items
+    added_lines = []
+    for line in lines:
+        line_payload = {
+            "machineId": line.get("machine_id"),
+            "price": line.get("price"),
+            "description": line.get("item_description")
+        }
+        line_res = await _make_api_call(f"/quotes/revisions/{rev_id}/lines", auth_token, method="POST", payload=line_payload)
+        
+        if isinstance(line_res, dict) and "id" in line_res:
+            added_lines.append(line_res)
+
+    return json.dumps({
+        "status": "success",
+        "message": "Quote drafted successfully.",
+        "quoteId": quote_id,
+        "revisionId": rev_id,
+        "linesAdded": len(added_lines)
+    }, indent=2)

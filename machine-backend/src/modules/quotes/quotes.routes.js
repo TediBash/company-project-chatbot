@@ -25,16 +25,16 @@ router.get('/', getQuotes);
 router.get('/:id', getQuoteDetails);
 
 // Protected Core Mutations
-router.post('/', requirePlatformOwner, createQuote);
+router.post('/', createQuote);
 router.put('/:id', requirePlatformOwner, updateQuote);
 router.delete('/:id', requirePlatformOwner, deleteQuote);
 
 // 2. Revisions & Line Items Mutations (Protected)
-router.post('/:id/revisions', requirePlatformOwner, createRevision);
+router.post('/:id/revisions', createRevision);
 router.put('/revisions/:revisionId', requirePlatformOwner, updateRevision);
 router.delete('/revisions/:revisionId', requirePlatformOwner, deleteRevision);
 
-router.post('/revisions/:revisionId/lines', requirePlatformOwner, createLineItem);
+router.post('/revisions/:revisionId/lines', createLineItem);
 router.put('/lines/:lineId', requirePlatformOwner, updateLineItem);
 router.delete('/lines/:lineId', requirePlatformOwner, deleteLineItem);
 

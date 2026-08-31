@@ -16,7 +16,6 @@ from app.tools.operational import (
 )
 
 from app.tools.commercial import (
-    get_spare_parts_catalog,
     get_order_history,
     get_purchase_details,
     get_quotation_history,
@@ -27,7 +26,6 @@ from app.tools.commercial import (
     get_machine_order_lines
 )
 
-from app.tools.commercial import get_spare_parts_catalog, get_order_history
 
 class DataExtractionPlan(BaseModel):
     """The agent uses this to decide which API calls to execute."""
@@ -39,53 +37,34 @@ class DataExtractionPlan(BaseModel):
     requires_approved_quotes: bool = Field(description="True if explicitly asking for 'approved' quotes.")
     requires_quotes_with_orders: bool = Field(description="True if asking for quotes that have an associated order.")
 
+class QuoteLineItem(BaseModel):
+    machine_id: str = Field(description="The exact UUID of the target machine.")
+    item_description: str = Field(description="What is being sold/serviced.")
+    price: float = Field(description="The price for this line item.")
+
 class CommercialDecision(BaseModel):
     """The agent uses this to trigger Human-in-the-Loop workflows."""
-    needs_quote: bool = Field(
-        description="CRITICAL: Set to True ONLY if the user explicitly uses action words like 'buy', 'purchase', 'order a new', or 'create quote'. Set to False if they are just reading data."
+    action_intent: str = Field(
+        default="read",
+        description="Must be 'read', 'create_ticket', or 'create_quote'."
     )
-    part_name: str = Field(
-        default="None", 
-        description="The specific part to buy or quote. Set to 'None' if needs_quote is False."
+    is_ready_to_execute: bool = Field(
+        default=False,
+        description="CRITICAL: Set to True ONLY if all required details are provided by the user. If False, the agent will reply and ask for missing details."
     )
-    request_type: str = Field(
-        default="Spare Parts",
-        description="Must be one of: 'Spare Parts', 'Machine Upgrade', 'Maintenance Service', 'Consumables', or 'Other'."
-    )
-    urgency: str = Field(
-        default="Standard",
-        description="Must be one of: 'Low', 'Standard', 'Urgent', or 'Critical' based on the user's sentiment."
-    )
-    description: str = Field(
-        default="",
-        description="A concise summary of the requested items or services for the ticket description."
-    )
-    reasoning: str = Field(
-        description="Briefly explain if the user is asking to CREATE a transaction or just READ history."
-    )
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "needs_quote": False,
-                    "part_name": "None",
-                    "request_type": "Spare Parts",
-                    "urgency": "Standard",
-                    "description": "",
-                    "reasoning": "The user is asking how many orders exist, which is a read-only historical data request."
-                },
-                {
-                    "needs_quote": True,
-                    "part_name": "Pneumatic Valve Assembly",
-                    "request_type": "Spare Parts",
-                    "urgency": "Urgent",
-                    "description": "User requested an urgent replacement for the pneumatic valve assembly.",
-                    "reasoning": "The user explicitly stated 'I want to buy a new pneumatic valve' and indicated urgency."
-                }
-            ]
-        }
-    }
+    
+    # Fields for 'create_ticket'
+    part_name: str = Field(default="None", description="The specific part to buy or quote.")
+    request_type: str = Field(default="Spare Parts", description="e.g., 'Spare Parts', 'Maintenance Service'.")
+    urgency: str = Field(default="Standard", description="Must be 'Low', 'Standard', 'Urgent', or 'Critical'.")
+    ticket_description: str = Field(default="", description="A summary for the ticket.")
+    
+    # Fields for 'create_quote'
+    quote_description: str = Field(default="", description="Overall description of the quote.")
+    quote_currency: str = Field(default="EUR", description="Currency for the quote, default EUR.")
+    quote_lines: List[QuoteLineItem] = Field(default_factory=list, description="List of items to include in the quote.")
+    
+    reasoning: str = Field(description="Briefly explain your classification and readiness.")
 
 class BaseAgent:
     def __init__(self):
@@ -193,7 +172,6 @@ class CommercialAgent(BaseAgent):
         auth_token = context.get("auth_token", "")
         company_id = context.get("company_id", "")
         active_machine_id = context.get("active_machine_id", "")
-        active_machine_name = context.get("active_machine_name", "Unknown Model")
         
         # Prepare base messages
         messages = [{"role": "system", "content": "Analyze the user's intent to extract data filtering requirements."}]
@@ -227,7 +205,7 @@ class CommercialAgent(BaseAgent):
         if plan.fetch_quotes:
             tasks.append(query_filtered_quotes(auth_token, c_id, m_id, plan.requires_quotes_with_orders, q_status))
         else:
-            tasks.append(asyncio.sleep(0)) # No-op placeholder
+            tasks.append(asyncio.sleep(0))
             
         if plan.fetch_orders:
             tasks.append(query_filtered_orders(auth_token, c_id, m_id))
@@ -242,9 +220,6 @@ class CommercialAgent(BaseAgent):
         # Execute Concurrently
         results = await asyncio.gather(*tasks)
         machine_quotes_data, machine_orders_data, quotes_data, orders_data, financials_data = results
-
-        if tracer:
-            tracer.add_step("Executed Dynamic Data Fetch", "tool_call", {"plan": plan.model_dump(), "fetched_quotes": bool(plan.fetch_quotes), "fetched_orders": bool(plan.fetch_orders)})
         
         if tracer:
             tracer.add_step(
@@ -282,26 +257,28 @@ class CommercialAgent(BaseAgent):
         
         
         # 4. Structured Output for HITL Routing
-        # --- ISOLATED HITL DECISION CALL ---
         decision_system_prompt = """
-        You are a strict routing classifier. Your ONLY job is to determine if the user is asking to initiate a NEW transaction (buy a part, request a quote) OR if they are just asking to read historical data.
-        If initiating a transaction, extract the request type, urgency, and formulate a description.
+        You are a strict routing classifier. Your ONLY job is to determine if the user is asking to read data ('read'), create a commercial request ticket ('create_ticket'), or draft a new quote ('create_quote').
+
+        If 'create_ticket', you need part_name and urgency.
+        If 'create_quote', you need quote_description, currency, and a list of quote_lines (machine_id, item_description, price). DO NOT guess prices.
+        
+        CRITICAL: If the user wants to create a quote or ticket but hasn't provided ALL the required information, set 'is_ready_to_execute' to false!
         
         FEW-SHOT EXAMPLES:
-        User: "How many orders has this company made for this machine?"
-        Output: {"needs_quote": false, "part_name": "None", "request_type": "Spare Parts", "urgency": "Standard", "description": "", "reasoning": "User is asking for historical order count."}
+        User: "I want to create a quote for a new spindle."
+        Output: {"action_intent": "create_quote", "is_ready_to_execute": false, "reasoning": "User wants a quote but hasn't provided the price or machine ID."}
         
-        User: "Show me the approved quotes."
-        Output: {"needs_quote": false, "part_name": "None", "request_type": "Spare Parts", "urgency": "Standard", "description": "", "reasoning": "User is asking to view existing approved quotes."}
-        
-        User: "I need to order a replacement magnetic clutch ASAP, the line is stopped!"
-        Output: {"needs_quote": true, "part_name": "magnetic clutch", "request_type": "Spare Parts", "urgency": "Critical", "description": "Customer needs a replacement magnetic clutch immediately due to a line stoppage.", "reasoning": "User explicitly asked to order a new part and indicated a critical machine-down situation."}
+        User: "Create a quote for a new spindle. Price is 1500 EUR for machine abc-123."
+        Output: {"action_intent": "create_quote", "is_ready_to_execute": true, "quote_description": "New spindle", "quote_currency": "EUR", "quote_lines": [{"machine_id": "abc-123", "item_description": "New spindle", "price": 1500}], "reasoning": "All info provided."}
         """
         
         decision_messages = [
-            {"role": "system", "content": decision_system_prompt},
-            {"role": "user", "content": query}
+            {"role": "system", "content": decision_system_prompt}
         ]
+        if "messages" in context:
+            decision_messages.extend(context["messages"])
+        decision_messages.append({"role": "user", "content": query})
         
         decision: CommercialDecision = await self.llm.generate_structured(
             model_name=self.worker_model, 
@@ -311,22 +288,60 @@ class CommercialAgent(BaseAgent):
         )
 
         if tracer and decision:
-            tracer.add_llm_step("Commercial HITL Decision", self.worker_model, messages, decision.model_dump_json(), decision.model_dump())
+            tracer.add_llm_step("Commercial HITL Decision", self.worker_model, decision_messages, decision.model_dump_json(), decision.model_dump())
 
-        # 5. Route to HITL or Stream standard response
-        if decision and decision.needs_quote:
-            tool_dict = ToolRegistry.create_commercial_request(
-                title=f"Commercial Request: {decision.part_name}",
-                request_type=decision.request_type,
-                urgency=decision.urgency,
-                description=decision.description,
-                machine_id=active_machine_id,
-                company_id=company_id
-            )
-            if tracer:
-                tracer.add_step("HITL Tool Triggered", "tool_call", tool_dict)
-            return tool_dict, messages
+        # 5. Route to HITL Tool OR Stream conversational response
+        if decision and decision.is_ready_to_execute:
             
+            # TRIGGER 1: Standard Spare Part Ticket
+            if decision.action_intent == "create_ticket":
+                tool_dict = ToolRegistry.create_commercial_request(
+                    title=f"Commercial Request: {decision.part_name}",
+                    request_type=decision.request_type,
+                    urgency=decision.urgency,
+                    description=decision.ticket_description,
+                    machine_id=active_machine_id,
+                    company_id=company_id
+                )
+                if tracer:
+                    tracer.add_step("HITL Tool Triggered (Ticket)", "tool_call", tool_dict)
+                return tool_dict, messages
+                
+            # TRIGGER 2: Quote Builder Engine
+            elif decision.action_intent == "create_quote":
+                
+                # Sanitize lines to ensure valid UUIDs instead of LLM hallucinations
+                sanitized_lines = []
+                for line in decision.quote_lines:
+                    m_id = line.machine_id
+                    # If the AI wrote "this machine" or it's clearly not a UUID, force the active ID
+                    if m_id.lower() in ["this machine", "unknown", "none", "", "active"] or len(m_id) < 10:
+                        m_id = active_machine_id
+                        
+                    sanitized_lines.append({
+                        "machine_id": m_id,
+                        "item_description": line.item_description,
+                        "price": line.price
+                    })
+
+                tool_dict = {
+                    "is_tool_call": True,
+                    "payload": {
+                        "action": "create_quote",
+                        "title": f"Draft New Quote: {decision.quote_description}",
+                        "data": {
+                            "companyId": company_id,
+                            "description": decision.quote_description,
+                            "currency": decision.quote_currency,
+                            "lines": sanitized_lines
+                        }
+                    }
+                }
+                if tracer:
+                    tracer.add_step("HITL Tool Triggered (Quote)", "tool_call", tool_dict)
+                return tool_dict, messages
+
+        # Fallback: Talk to the user (e.g., to read data, or to ask for missing quote details)
         return self.llm.stream_response(model_name=self.worker_model, messages=messages), messages
 
 class GeneralAgent(BaseAgent):
