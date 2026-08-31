@@ -1,5 +1,6 @@
 # app/pipeline/executor.py
 import asyncio
+from multiprocessing import context
 from typing import AsyncGenerator, Dict, Any
 from pydantic import BaseModel, Field
 
@@ -11,6 +12,8 @@ from app.agents.specialized import TechnicalAgent, CommercialAgent, OperationalA
 from app.llm.client import UniversalLLMClient
 from app.prompts.registry import prompt_registry
 from app.pipeline.tracer import AITrajectoryTracer
+from app.tools.operational import get_machine_configuration
+
 
 class CriticEvaluation(BaseModel):
     is_valid: bool = Field(description="True if the draft safely and accurately answers the user.")
@@ -54,6 +57,7 @@ class CognitiveLoopExecutor:
                 # Fetch variables for the router
                 user_role = getattr(self, "user_role", "technician")
                 active_machine_name = getattr(self, "active_machine_name", "Unknown Model")
+                active_machine_id  = getattr(self, "active_machine_id", "");
                 
                 # FIX: Extract strictly the serial number, avoiding machine_id fallback
                 raw_serial = getattr(self, "active_serial_number", "")
@@ -124,11 +128,23 @@ class CognitiveLoopExecutor:
             raw_serial = getattr(self, "active_serial_number", "")
             active_serial = raw_serial if raw_serial and raw_serial != getattr(self, "active_machine_id", "") else "Unknown SN"
             
+            machine_config_data = await self.memory_manager.get_session_variable(self.session_id, "machine_config")
+            if not machine_config_data and active_machine_id:
+                try:
+                    machine_config_data = await get_machine_configuration(active_machine_id, getattr(self, "auth_token", ""))
+                    await self.memory_manager.save_session_variable(self.session_id, "machine_config", machine_config_data)
+                except Exception as e:
+                    print(f"Failed to fetch machine config: {e}")
+                    machine_config_data = "Configuration unavailable."
+            
             # ---> MOVED: Machine Directive is now globally available to all agents <---
             machine_directive = (
                 f"\n### ACTIVE TARGET MACHINE\n"
                 f"You are currently supporting the {active_machine_name} (Serial Number: {active_serial}).\n"
-                f"When the user asks what machine they are working on, confidently reply with this exact model name and serial number.\n"
+                f"### EXTENDED CONFIGURATION PROFILE\n"
+                f"The physical specifications and installed options for this specific machine are:\n"
+                f"{machine_config_data}\n\n"
+                f"When the user asks what machine they are working on or asks for its specifications, confidently reply with this exact data.\n"
                 f"PROACTIVE OFFER: Always remind the user that you have the official manual loaded and offer to help with procedures.\n\n"
             )
             
@@ -173,8 +189,7 @@ class CognitiveLoopExecutor:
                     if pinned_rag:
                         context["rag_blocks"] = pinned_rag
                     else:
-                        context["rag_blocks"] = "No manual excerpts required for this general query."
-                
+                        context["rag_blocks"] = "SYSTEM ALERT: No relevant manual excerpts were found in the database for this specific machine. You MUST state that you do not have the manual available and CANNOT provide mechanical steps."                
                     
                 tracer.add_step("RAG Retrieval", "vector_search", {
                     "serial_number": active_serial,

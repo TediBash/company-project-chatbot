@@ -48,7 +48,7 @@ export const MachinesPage = () => {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
   
-  // NEW: State for the Full-Screen PDF Viewer
+  // State for the Full-Screen PDF Viewer
   const [viewingManual, setViewingManual] = useState(null);
 
   const fetchMachines = useCallback(async () => {
@@ -126,6 +126,14 @@ export const MachinesPage = () => {
           </span>
         );
     }
+  };
+
+  // Helper function to format camelCase keys into capitalized readable labels
+  const formatKey = (key) => {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim();
   };
 
   return (
@@ -230,7 +238,7 @@ export const MachinesPage = () => {
       {/* INSPECT MACHINE MODAL */}
       {selectedMachine && (
         <BaseModal
-          isOpen={!!selectedMachine && !viewingManual} // Hide this modal if the PDF viewer is active
+          isOpen={!!selectedMachine && !viewingManual}
           onClose={() => setSelectedMachine(null)}
           title={`Machine Specification: S/N ${selectedMachine.serialNumber}`}
         >
@@ -278,6 +286,56 @@ export const MachinesPage = () => {
               </div>
             </div>
 
+            {/* DYNAMIC CONFIGURATION PROFILE RENDERER */}
+            {selectedMachine.configurationProfile && (
+              <div className="pt-2 border-t border-gray-100">
+                <h4 className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">
+                  Extended Configuration Profile
+                </h4>
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  {(() => {
+                    let config = selectedMachine.configurationProfile;
+                    
+                    // 1. Safety parse if it arrives as a stringified JSON
+                    if (typeof config === 'string') {
+                      try { config = JSON.parse(config); } catch (e) { config = null; }
+                    }
+                    
+                    // 2. If it's an array (like in your example), extract the first object
+                    if (Array.isArray(config) && config.length > 0) {
+                      config = config[0];
+                    }
+                    
+                    if (!config || typeof config !== 'object') {
+                      return <p className="text-xs text-gray-500 italic">Configuration data unavailable.</p>;
+                    }
+
+                    // 3. Dynamically map through the object keys
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+                        {Object.entries(config).map(([key, value]) => (
+                          <div key={key}>
+                            <p className="text-gray-400 uppercase text-[9px] font-bold mb-1">
+                              {formatKey(key)}
+                            </p>
+                            {Array.isArray(value) ? (
+                              <ul className="list-disc list-inside text-xs font-medium text-gray-800 space-y-0.5">
+                                {value.map((item, idx) => (
+                                  <li key={idx}>{item}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="font-medium text-gray-800 text-xs">{value?.toString()}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
             {selectedMachine.healthNote && (
               <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-lg text-xs">
                 <p className="text-[10px] font-bold text-blue-700 uppercase mb-1">Telemetry Note</p>
@@ -285,7 +343,6 @@ export const MachinesPage = () => {
               </div>
             )}
 
-            {/* UPDATED FOOTER: Added "Open Manual" Button */}
             <div className="flex justify-between items-center pt-4 border-t border-gray-100">
               <button
                 onClick={() => setViewingManual(selectedMachine)}
@@ -312,22 +369,20 @@ export const MachinesPage = () => {
       {viewingManual && (
         <div className="fixed inset-0 z-[100] bg-gray-900/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-300">
           
-          {/* Top Navbar for the PDF Viewer */}
           <header className="flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-800 shadow-xl z-10">
             <div>
               <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1">
                 Technical Documentation
               </p>
               <h2 className="text-xl font-light text-white">
-                {viewingManual.modelCode} - Operations Manual
+                {viewingManual.serialNumber} - Operations Manual
               </h2>
             </div>
             
             <div className="flex items-center gap-4">
               <a 
-                /* In the future, replace this href with: viewingManual.manualUrl */
-                href={`/manuals/${viewingManual.modelCode}.pdf`} 
-                download={`${viewingManual.modelCode}_Manual.pdf`}
+                href={`/manuals/${viewingManual.serialNumber}.pdf`} 
+                download={`${viewingManual.serialNumber}_Manual.pdf`}
                 className="px-4 py-2 text-xs font-bold text-white bg-gray-800 border border-gray-700 hover:bg-gray-700 rounded-md uppercase tracking-wider transition-colors flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -350,13 +405,11 @@ export const MachinesPage = () => {
             </div>
           </header>
 
-          {/* PDF iFrame Container */}
           <div className="flex-1 w-full h-full p-4 md:p-8 flex justify-center items-center">
             <iframe 
-              /* In the future, replace this src with: viewingManual.manualUrl */
-              src={`/manuals/${viewingManual.modelCode}.pdf`} 
+              src={`/manuals/${viewingManual.serialNumber}.pdf`} 
               className="w-full max-w-6xl h-full rounded-xl shadow-2xl border border-gray-700 bg-white"
-              title={`${viewingManual.modelCode} Technical Manual`}
+              title={`${viewingManual.serialNumber} Technical Manual`}
             />
           </div>
         </div>

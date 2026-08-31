@@ -28,6 +28,9 @@ export const ProvisioningPage = () => {
     plcFamily: 'Siemens', softwareVersion: 'v1.0'
   };
   const [form, setForm] = useState(initialFormState);
+  
+  // NEW: State for dynamic configuration key-value pairs
+  const [configPairs, setConfigPairs] = useState([]);
 
   // Fetch Options
   useEffect(() => {
@@ -89,13 +92,55 @@ export const ProvisioningPage = () => {
     }
   ];
 
+  // --- Dynamic Key-Value Handlers ---
+  const handleAddConfigPair = () => {
+    setConfigPairs([...configPairs, { key: '', value: '' }]);
+  };
+
+  const handleUpdateConfigPair = (index, field, newValue) => {
+    const updated = [...configPairs];
+    updated[index][field] = newValue;
+    setConfigPairs(updated);
+  };
+
+  const handleRemoveConfigPair = (index) => {
+    setConfigPairs(configPairs.filter((_, i) => i !== index));
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+
+    // Reconstruct the JSON from Key-Value pairs
+    let finalConfig = {};
+    configPairs.forEach(pair => {
+      const k = pair.key.trim();
+      const v = pair.value.trim();
+      
+      if (k) {
+        if (v.includes(',')) {
+          // If it contains commas, turn it into an array of strings
+          finalConfig[k] = v.split(',').map(s => s.trim()).filter(Boolean);
+        } else if (!isNaN(v) && v !== '') {
+          // If it's a valid number, save it as a number type
+          finalConfig[k] = Number(v);
+        } else {
+          // Otherwise, save as a standard string
+          finalConfig[k] = v;
+        }
+      }
+    });
+
+    // Wrap in an array if the backend expects [{...}] or set to null if empty
+    const configurationProfile = Object.keys(finalConfig).length > 0 ? [finalConfig] : null;
+    
+    // Merge into the final payload
+    const payload = { ...form, configurationProfile };
+
     try {
       if (selectedMachine) {
-        await apiClient.put(`/provisioning/${selectedMachine.id}`, form);
+        await apiClient.put(`/provisioning/${selectedMachine.id}`, payload);
       } else {
-        await apiClient.post('/provisioning', form);
+        await apiClient.post('/provisioning', payload);
       }
       setIsModalOpen(false);
       fetchMachines();
@@ -126,8 +171,32 @@ export const ProvisioningPage = () => {
         plcFamily: machine.plcFamily,
         softwareVersion: machine.softwareVersion
       });
+
+      // Parse JSON into Key-Value pairs for the UI
+      let parsedPairs = [];
+      let configObj = machine.configurationProfile;
+      
+      // Parse string if necessary
+      if (typeof configObj === 'string') {
+        try { configObj = JSON.parse(configObj); } catch(e) { configObj = null; }
+      }
+      // Extract from array if it is stored as an array of one object
+      if (Array.isArray(configObj) && configObj.length > 0) {
+        configObj = configObj[0];
+      }
+      
+      if (configObj && typeof configObj === 'object') {
+        parsedPairs = Object.entries(configObj).map(([k, v]) => ({
+          key: k,
+          // Join array elements with commas for easy editing
+          value: Array.isArray(v) ? v.join(', ') : String(v) 
+        }));
+      }
+      setConfigPairs(parsedPairs);
+
     } else {
       setForm(initialFormState);
+      setConfigPairs([]);
     }
     setIsModalOpen(true);
   };
@@ -228,7 +297,7 @@ export const ProvisioningPage = () => {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <DynamicTable columns={columns} data={machines} isLoading={isLoading} />
         
-        {/* Pagination Footer (Max 25 Rows per page as requested) */}
+        {/* Pagination Footer */}
         {!isLoading && stats.totalMachines > 0 && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
             <p className="text-xs text-gray-500 font-medium">
@@ -304,7 +373,58 @@ export const ProvisioningPage = () => {
               </div>
             </div>
 
-            <div className="pt-4 flex justify-end gap-3">
+            {/* DYNAMIC KEY-VALUE BUILDER */}
+            <div className="space-y-3 pt-4 border-t border-gray-100">
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">
+                  Extended Configuration Profile
+                </label>
+                <span className="text-[9px] text-gray-400 font-normal">Use commas for multiple items</span>
+              </div>
+              
+              <div className="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                {configPairs.length === 0 && (
+                  <p className="text-xs text-gray-400 italic text-center py-2">No custom configuration properties added.</p>
+                )}
+                
+                {configPairs.map((pair, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <input 
+                      type="text" 
+                      placeholder="Property (e.g. voltage)"
+                      value={pair.key}
+                      onChange={(e) => handleUpdateConfigPair(index, 'key', e.target.value)}
+                      className="flex-1 border border-gray-300 rounded-md p-2 text-xs focus:outline-none focus:border-red-600 bg-white"
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Value (e.g. 400V, or Item 1, Item 2)"
+                      value={pair.value}
+                      onChange={(e) => handleUpdateConfigPair(index, 'value', e.target.value)}
+                      className="flex-[2] border border-gray-300 rounded-md p-2 text-xs focus:outline-none focus:border-red-600 bg-white"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveConfigPair(index)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                      title="Remove Property"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                ))}
+                
+                <button 
+                  type="button" 
+                  onClick={handleAddConfigPair}
+                  className="mt-2 text-[10px] font-bold uppercase tracking-widest text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded transition-colors"
+                >
+                  + Add Property
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
               <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-xs font-semibold tracking-wider text-gray-500 uppercase hover:bg-gray-50 rounded-md">Cancel</button>
               <button type="submit" className="px-5 py-2.5 text-xs font-bold tracking-wider text-white bg-red-600 hover:bg-red-700 rounded-md uppercase">{selectedMachine ? "Update Mapping" : "Map Machine"}</button>
             </div>

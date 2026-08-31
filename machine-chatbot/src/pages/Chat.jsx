@@ -34,6 +34,8 @@ export const ChatPage = () => {
   const [availableMachines, setAvailableMachines] = useState([]);
   const [selectedMachine, setSelectedMachine] = useState('');
   const [activeMachineContext, setActiveMachineContext] = useState(null);
+
+  const [viewingManual, setViewingManual] = useState(null);
   
   // 3. Admin Toggle & Search State
   const [viewAll, setViewAll] = useState(false);
@@ -76,7 +78,8 @@ export const ChatPage = () => {
         const formattedMachines = response.data.map(machine => ({
           id: machine.id, 
           serialNumber: machine.serialNumber, 
-          name: machine.modelDescription || machine.modelCode || 'Unknown Model'
+          name: machine.modelDescription || machine.modelCode || 'Unknown Model',
+          modelCode: machine.modelCode
         }));
         setAvailableMachines(formattedMachines);
       } catch (err) {
@@ -102,7 +105,8 @@ export const ChatPage = () => {
         setActiveMachineContext({
           id: machine.id,
           name: machine.name,
-          serialNumber: machine.serialNumber
+          serialNumber: machine.serialNumber,
+          modelCode: machine.modelCode
         });
       } else {
         setActiveMachineContext({
@@ -586,6 +590,19 @@ const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
           
           {activeSession && (
             <div className="flex gap-3">
+
+              {activeMachineContext?.modelCode && (
+                <button
+                  onClick={() => setViewingManual(activeMachineContext)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--color-tenant-primary)] bg-blue-50 border border-blue-100 hover:bg-blue-100 hover:opacity-90 transition-all rounded-md shadow-sm mr-2"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  Open Manual
+                </button>
+              )}
+
               <button 
                 onClick={() => { setEditChatTitle(activeSession.title); setIsEditModalOpen(true); }}
                 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-[var(--color-tenant-primary)] transition-colors"
@@ -790,6 +807,57 @@ const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
           </div>
         </div>
       </BaseModal>
+      
+      {/* FULL-SCREEN PDF THEATER OVERLAY */}
+      {viewingManual && (
+        <div className="fixed inset-0 z-[100] bg-gray-900/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-300">
+          
+          <header className="flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-800 shadow-xl z-10">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1">
+                Technical Documentation
+              </p>
+              <h2 className="text-xl font-light text-white">
+                {viewingManual.serialNumber} - Operations Manual
+              </h2>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <a 
+                href={`/manuals/${viewingManual.serialNumber}.pdf`} 
+                download={`${viewingManual.serialNumber}_Manual.pdf`}
+                className="px-4 py-2 text-xs font-bold text-white bg-gray-800 border border-gray-700 hover:bg-gray-700 rounded-md uppercase tracking-wider transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download PDF
+              </a>
+              
+              <div className="w-px h-6 bg-gray-700"></div>
+              
+              <button 
+                onClick={() => setViewingManual(null)}
+                className="p-2 text-gray-400 hover:text-white hover:bg-red-500/20 rounded-full transition-colors group"
+                title="Close Manual"
+              >
+                <svg className="w-6 h-6 group-hover:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          <div className="flex-1 w-full h-full p-4 md:p-8 flex justify-center items-center">
+            <iframe 
+              src={`/manuals/${viewingManual.serialNumber}.pdf`} 
+              className="w-full max-w-6xl h-full rounded-xl shadow-2xl border border-gray-700 bg-white"
+              title={`${viewingManual.serialNumber} Technical Manual`}
+            />
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

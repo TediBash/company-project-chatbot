@@ -47,6 +47,7 @@ export const getProvisionedMachines = async (req, res) => {
     const stats = statsRes.rows[0];
 
     // 3. Paginated Data Query (With LIMIT and OFFSET)
+    // ADDED: m.configuration_profile AS "configurationProfile"
     const dataSql = `
       SELECT 
         m.machine_id AS "id",
@@ -55,6 +56,7 @@ export const getProvisionedMachines = async (req, res) => {
         TO_CHAR(m.delivery_date, 'YYYY-MM-DD') AS "deliveryDate",
         m.plc_family AS "plcFamily",
         m.software_version AS "softwareVersion",
+        m.configuration_profile AS "configurationProfile",
         c.company_id AS "companyId",
         c.company_name AS "companyName",
         mm.model_id AS "modelId",
@@ -116,14 +118,18 @@ export const getProvisioningOptions = async (req, res) => {
 
 // POST /api/provisioning
 export const createProvisionedMachine = async (req, res) => {
-  const { companyId, modelId, serialNumber, plantLocation, deliveryDate, plcFamily, softwareVersion } = req.body;
+  // EXTRACTED: configurationProfile from req.body
+  const { companyId, modelId, serialNumber, plantLocation, deliveryDate, plcFamily, softwareVersion, configurationProfile } = req.body;
   try {
+    // Stringify the incoming JSON or default to an empty JSON object string if null
+    const configJson = configurationProfile ? JSON.stringify(configurationProfile) : '{}';
+
     const sql = `
       INSERT INTO app_tenant.machines 
         (machine_id, company_id, model_id, serial_number, plant_location, delivery_date, plc_family, software_version, configuration_profile)
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, '{}')
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
     `;
-    await query(sql, [companyId, modelId, serialNumber, plantLocation, deliveryDate, plcFamily, softwareVersion]);
+    await query(sql, [companyId, modelId, serialNumber, plantLocation, deliveryDate, plcFamily, softwareVersion, configJson]);
     res.status(201).json({ message: 'Machine deployed successfully.' });
   } catch (error) {
     if (error.code === '23505') return res.status(409).json({ message: 'This Serial Number is already registered for this specific Company.' });
@@ -135,15 +141,19 @@ export const createProvisionedMachine = async (req, res) => {
 // PUT /api/provisioning/:id
 export const updateProvisionedMachine = async (req, res) => {
   const { id } = req.params;
-  const { companyId, modelId, serialNumber, plantLocation, deliveryDate, plcFamily, softwareVersion } = req.body;
+  // EXTRACTED: configurationProfile from req.body
+  const { companyId, modelId, serialNumber, plantLocation, deliveryDate, plcFamily, softwareVersion, configurationProfile } = req.body;
   try {
+    // Stringify the incoming JSON or default to an empty JSON object string if null
+    const configJson = configurationProfile ? JSON.stringify(configurationProfile) : '{}';
+
     const sql = `
       UPDATE app_tenant.machines 
       SET company_id = $1, model_id = $2, serial_number = $3, plant_location = $4, 
-          delivery_date = $5, plc_family = $6, software_version = $7
-      WHERE machine_id = $8
+          delivery_date = $5, plc_family = $6, software_version = $7, configuration_profile = $8
+      WHERE machine_id = $9
     `;
-    await query(sql, [companyId, modelId, serialNumber, plantLocation, deliveryDate, plcFamily, softwareVersion, id]);
+    await query(sql, [companyId, modelId, serialNumber, plantLocation, deliveryDate, plcFamily, softwareVersion, configJson, id]);
     res.json({ message: 'Machine configuration updated.' });
   } catch (error) {
     if (error.code === '23505') return res.status(409).json({ message: 'This Serial Number is already registered for this specific Company.' });
