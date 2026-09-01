@@ -164,6 +164,8 @@ class CognitiveLoopExecutor:
             context["auth_token"] = getattr(self, "auth_token", "")
             context["active_machine_id"] = getattr(self, "active_machine_id", "")
             context["company_id"] = self.company_id
+            context["active_machine_model"] = active_machine_model
+            context["active_serial_number"] = active_serial
             
             if active_pipeline.rag.enabled and target_agent_name == "technical":
                 active_machine = getattr(self, "active_machine_id", "unknown")

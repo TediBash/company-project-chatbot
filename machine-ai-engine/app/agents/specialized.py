@@ -21,7 +21,6 @@ from app.tools.commercial import (
     get_quotation_history,
     query_filtered_quotes,
     query_filtered_orders,
-    get_machine_financials,
     get_machine_quotations,
     get_machine_order_lines
 )
@@ -38,7 +37,8 @@ class DataExtractionPlan(BaseModel):
     requires_quotes_with_orders: bool = Field(description="True if asking for quotes that have an associated order.")
 
 class QuoteLineItem(BaseModel):
-    machine_id: str = Field(description="The exact UUID of the target machine.")
+    model_code: str = Field(description="The model code of the target machine (e.g. TS-EURO-PK).")
+    serial_number: str = Field(description="The serial number of the target machine.")
     item_description: str = Field(description="What is being sold/serviced.")
     price: float = Field(description="The price for this line item.")
 
@@ -49,8 +49,8 @@ class CommercialDecision(BaseModel):
         description="Must be 'read', 'create_ticket', or 'create_quote'."
     )
     is_ready_to_execute: bool = Field(
-        default=False,
-        description="CRITICAL: Set to True ONLY if all required details are provided by the user. If False, the agent will reply and ask for missing details."
+        default=True,
+        description="CRITICAL: Set to true if the user provided the required details. Set to false ONLY if essential information is missing."
     )
     
     # Fields for 'create_ticket'
@@ -172,6 +172,8 @@ class CommercialAgent(BaseAgent):
         auth_token = context.get("auth_token", "")
         company_id = context.get("company_id", "")
         active_machine_id = context.get("active_machine_id", "")
+        active_machine_model = context.get("active_machine_model", "Unknown")
+        active_serial_number = context.get("active_serial_number", "Unknown")
         
         # Prepare base messages
         messages = [{"role": "system", "content": "Analyze the user's intent to extract data filtering requirements."}]
@@ -212,14 +214,10 @@ class CommercialAgent(BaseAgent):
         else:
             tasks.append(asyncio.sleep(0))
             
-        if plan.fetch_financials:
-            tasks.append(get_machine_financials(active_machine_id, auth_token))
-        else:
-            tasks.append(asyncio.sleep(0))
 
         # Execute Concurrently
         results = await asyncio.gather(*tasks)
-        machine_quotes_data, machine_orders_data, quotes_data, orders_data, financials_data = results
+        machine_quotes_data, machine_orders_data, quotes_data, orders_data = results
         
         if tracer:
             tracer.add_step(
@@ -232,7 +230,6 @@ class CommercialAgent(BaseAgent):
                         "machine_orders_data": machine_orders_data,
                         "order_history": orders_data or '',
                         "quote_data": quotes_data,
-                        "financials_data": financials_data
                     }
                 }
             )
@@ -244,7 +241,8 @@ class CommercialAgent(BaseAgent):
             "machine_order_lines": machine_orders_data,
             "quotation_history": quotes_data if plan.fetch_quotes else "Data not requested for this query.",
             "order_history": orders_data if plan.fetch_orders else "Data not requested for this query.",
-            "purchase_details": financials_data if plan.fetch_financials else "Data not requested for this query."
+            "purchase_details": "Data not requested for this query."
+
         }
         prompt = prompt_registry.render("commercial", variables)
         
@@ -257,20 +255,25 @@ class CommercialAgent(BaseAgent):
         
         
         # 4. Structured Output for HITL Routing
-        decision_system_prompt = """
+        decision_system_prompt = f"""
         You are a strict routing classifier. Your ONLY job is to determine if the user is asking to read data ('read'), create a commercial request ticket ('create_ticket'), or draft a new quote ('create_quote').
 
-        If 'create_ticket', you need part_name and urgency.
-        If 'create_quote', you need quote_description, currency, and a list of quote_lines (machine_id, item_description, price). DO NOT guess prices.
+        ### STRICT INTENT RULES
+        1. IF A PRICE IS PROVIDED (e.g., "for 3000 euro"), you MUST select 'create_quote'.
+        2. If 'create_ticket', you need part_name and urgency. (Use ONLY if no price is provided).
+        3. If 'create_quote', you need quote_description, currency, and a list of quote_lines (model_code, serial_number, item_description, price). DO NOT guess prices.
         
-        CRITICAL: If the user wants to create a quote or ticket but hasn't provided ALL the required information, set 'is_ready_to_execute' to false!
+        ### CRITICAL CONTEXT RULES
+        1. THE MACHINE INFO IS ALREADY KNOWN: The system automatically tracks the active machine. Assume Model Code is '{active_machine_model}' and Serial Number is '{active_serial_number}'.
+        2. If the user provides the necessary details (price and description for quotes; part name and urgency for tickets), you MUST set 'is_ready_to_execute' to true.
+        3. ONLY set 'is_ready_to_execute' to false if information is actually missing.
         
         FEW-SHOT EXAMPLES:
-        User: "I want to create a quote for a new spindle."
-        Output: {"action_intent": "create_quote", "is_ready_to_execute": false, "reasoning": "User wants a quote but hasn't provided the price or machine ID."}
-        
-        User: "Create a quote for a new spindle. Price is 1500 EUR for machine abc-123."
-        Output: {"action_intent": "create_quote", "is_ready_to_execute": true, "quote_description": "New spindle", "quote_currency": "EUR", "quote_lines": [{"machine_id": "abc-123", "item_description": "New spindle", "price": 1500}], "reasoning": "All info provided."}
+        User: "Create a quote for a new spindle. Price is 1500 EUR."
+        Output: {{"action_intent": "create_quote", "is_ready_to_execute": true, "quote_description": "New spindle", "quote_currency": "EUR", "quote_lines": [{{"model_code": "{active_machine_model}", "serial_number": "{active_serial_number}", "item_description": "New spindle", "price": 1500}}], "reasoning": "All quote info provided."}}
+
+        User: "I need to order a new Test cupper, it is urgent."
+        Output: {{"action_intent": "create_ticket", "is_ready_to_execute": true, "part_name": "Test cupper", "urgency": "urgent", "ticket_description": "Test cupper urgent", "reasoning": "All ticket info provided."}}
         """
         
         decision_messages = [
@@ -295,14 +298,18 @@ class CommercialAgent(BaseAgent):
             
             # TRIGGER 1: Standard Spare Part Ticket
             if decision.action_intent == "create_ticket":
-                tool_dict = ToolRegistry.create_commercial_request(
-                    title=f"Commercial Request: {decision.part_name}",
-                    request_type=decision.request_type,
-                    urgency=decision.urgency,
-                    description=decision.ticket_description,
-                    machine_id=active_machine_id,
-                    company_id=company_id
-                )
+                tool_dict = {
+                    "is_tool_call": True,
+                    "payload": {
+                        "action": "create_commercial_request",
+                        "title": f"Commercial Request: {decision.part_name}",
+                        "type": decision.request_type,
+                        "urgency": decision.urgency,
+                        "description": decision.ticket_description,
+                        "machine_id": active_machine_id,
+                        "company_id": company_id
+                    }
+                }
                 if tracer:
                     tracer.add_step("HITL Tool Triggered (Ticket)", "tool_call", tool_dict)
                 return tool_dict, messages
@@ -313,13 +320,9 @@ class CommercialAgent(BaseAgent):
                 # Sanitize lines to ensure valid UUIDs instead of LLM hallucinations
                 sanitized_lines = []
                 for line in decision.quote_lines:
-                    m_id = line.machine_id
-                    # If the AI wrote "this machine" or it's clearly not a UUID, force the active ID
-                    if m_id.lower() in ["this machine", "unknown", "none", "", "active"] or len(m_id) < 10:
-                        m_id = active_machine_id
-                        
                     sanitized_lines.append({
-                        "machine_id": m_id,
+                        "model_code": line.model_code,
+                        "serial_number": line.serial_number,
                         "item_description": line.item_description,
                         "price": line.price
                     })

@@ -303,15 +303,34 @@ export const deleteRevision = async (req, res) => {
 // POST /api/quotes/revisions/:revisionId/lines
 export const createLineItem = async (req, res) => {
   const { revisionId } = req.params;
-  const { machineId, price, description } = req.body;
+  // Now extracting the new fields from Python payload
+  const { modelCode, serialNumber, price, description, machineId } = req.body;
 
   try {
+    let targetMachineId = machineId || null;
+
+    // ---> NEW: Dynamically resolve the machine_id <---
+    if (!targetMachineId && modelCode && serialNumber) {
+      const machineLookup = await query(`
+        SELECT m.machine_id 
+        FROM app_tenant.machines m
+        JOIN app_tenant.machine_models mm ON m.model_id = mm.model_id
+        WHERE mm.model_code = $1 AND m.serial_number = $2
+      `, [modelCode, serialNumber]);
+      
+      if (machineLookup.rows.length > 0) {
+        targetMachineId = machineLookup.rows[0].machine_id;
+      } else {
+        console.warn(`[Line Item] Machine ${modelCode} (SN: ${serialNumber}) not found. Resolving as General Supply.`);
+      }
+    }
+
     const sql = `
       INSERT INTO app_commercial.quote_lines (quote_revision_id, machine_id, price, item_description)
       VALUES ($1, $2, $3, $4)
       RETURNING line_id AS "id"
     `;
-    const { rows } = await query(sql, [revisionId, machineId, price, description]);
+    const { rows } = await query(sql, [revisionId, targetMachineId, price, description]);
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('[CREATE Line Error]', error);

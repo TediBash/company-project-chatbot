@@ -90,13 +90,6 @@ async def query_filtered_orders(
     result = await _make_api_call(endpoint, auth_token)
     return json.dumps(result, indent=2)
 
-async def get_machine_financials(machine_id: str, auth_token: str) -> str:
-    """Retrieves the original purchase cost, delivery date, and lifecycle financial data."""
-    if not machine_id:
-        return json.dumps({"error": "Machine ID is required for financials."})
-    result = await _make_api_call(f"/commercial/machines/{machine_id}/financials", auth_token)
-    return json.dumps(result, indent=2)
-
 async def get_machine_quotations(machine_id: str, auth_token: str) -> str:
     """Gets detailed quote revisions and quote lines for the active machine."""
     if not machine_id: return "{}"
@@ -163,7 +156,8 @@ async def create_draft_quote(
     added_lines = []
     for line in lines:
         line_payload = {
-            "machineId": line.get("machine_id"),
+            "modelCode": line.get("model_code"),
+            "serialNumber": line.get("serial_number"),
             "price": line.get("price"),
             "description": line.get("item_description")
         }
