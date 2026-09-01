@@ -28,7 +28,9 @@ export const ModelsPage = () => {
     capType: '',
     nominalHeads: '',
     primitiveDiameter: '',
-    manualUrl: ''
+    manualUrl: '',
+    industrySegment: '',
+    notes: ''
   };
   const [form, setForm] = useState(initialFormState);
 
@@ -138,7 +140,9 @@ export const ModelsPage = () => {
       capType: model.capType || '',
       nominalHeads: model.nominalHeads || '',
       primitiveDiameter: model.primitiveDiameter || '',
-      manualUrl: model.manualUrl || ''
+      manualUrl: model.manualUrl || '',
+      industrySegment: model.industrySegment || '',
+      notes: model.notes || ''
     });
     setIsEditModalOpen(true);
   };
@@ -166,6 +170,11 @@ export const ModelsPage = () => {
           <span className="text-xs text-gray-500 font-light line-clamp-1 max-w-[200px]" title={row.description}>
             {row.description}
           </span>
+          {row.industrySegment && (
+            <span className="inline-block mt-1.5 px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold uppercase tracking-wider rounded-md border border-blue-100">
+              {row.industrySegment}
+            </span>
+          )}
         </div>
       )
     },
@@ -310,15 +319,28 @@ export const ModelsPage = () => {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Description / Family</label>
-              <input 
-                type="text"
-                required
-                value={form.description}
-                onChange={(e) => setForm({...form, description: e.target.value})}
-                className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-red-600"
-              />
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Description / Family</label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="e.g. Rotary Capper"
+                  value={form.description}
+                  onChange={(e) => setForm({...form, description: e.target.value})}
+                  className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-red-600"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Industry Segment</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Beverage, Pharma"
+                  value={form.industrySegment}
+                  onChange={(e) => setForm({...form, industrySegment: e.target.value})}
+                  className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-red-600"
+                />
+              </div>
             </div>
 
             <div className="pt-2">
@@ -375,6 +397,19 @@ export const ModelsPage = () => {
                     className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-red-600"
                   />
                 </div>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Internal Notes (Optional)</label>
+                <textarea 
+                  rows="3"
+                  placeholder="Additional context or specific handling instructions..."
+                  value={form.notes}
+                  onChange={(e) => setForm({...form, notes: e.target.value})}
+                  className="w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:border-red-600 bg-gray-50 resize-none"
+                />
               </div>
             </div>
 

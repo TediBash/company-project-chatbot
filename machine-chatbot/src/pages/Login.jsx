@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import apiClient from '../api/client';
 
 export const LoginPage = ({ tenant }) => {
@@ -10,6 +10,11 @@ export const LoginPage = ({ tenant }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from 
+    ? `${location.state.from.pathname}${location.state.from.search || ''}` 
+    : '/dashboard';
 
   // 2. Ensure CSS variables are applied when the component mounts or tenant changes
   useEffect(() => {
@@ -56,9 +61,12 @@ export const LoginPage = ({ tenant }) => {
 
       const { token, user } = response.data;
 
+      // Store the token (and user string if your ProtectedRoute expects it!)
       localStorage.setItem('arol_token', token);
+      localStorage.setItem('arol_user', JSON.stringify(user));
 
-      navigate('/dashboard');
+      // ---> THE FIX: Navigate to the captured URL instead of hardcoding /dashboard <---
+      navigate(from, { replace: true });
 
     } catch (err) {
       console.error('Login error:', err);

@@ -155,7 +155,7 @@ export const OrderFulfillmentPage = () => {
       render: (_, row) => {
         if (!row.machineId) return <span className="text-gray-400 italic text-xs">General / No Machine</span>;
         const m = machines.find(mac => mac.id === row.machineId);
-        return <span className="text-xs font-medium text-gray-700">{m ? `${m.modelDescription} (SN: ${m.serialNumber})` : 'Unknown'}</span>;
+        return <span className="text-xs font-medium text-gray-700">{m ? `${m.modelCode} (SN: ${m.serialNumber})` : 'Unknown'}</span>;
       }
     },
     {

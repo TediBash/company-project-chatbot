@@ -68,7 +68,7 @@ function App() {
             {/* Standard Tenant Routes */}
             <Route path="/users" element={<RoleGuard allowedRoles={['full']}><UsersPage /></RoleGuard>} />
             <Route path="/machines" element={<RoleGuard allowedRoles={['full', 'technician', 'commercial']}><MachinesPage /></RoleGuard>} />
-            <Route path="/chat" element={<RoleGuard allowedRoles={['full', 'technician']}><ChatPage /></RoleGuard>} />
+            <Route path="/chat" element={<RoleGuard allowedRoles={['full', 'technician', 'commercial']}><ChatPage /></RoleGuard>} />
             <Route path="/commercial" element={<PlatformOwnerGuard><CommercialPage /></PlatformOwnerGuard>} />
             <Route path="/quotes" element={<RoleGuard allowedRoles={['full', 'commercial']}><QuotesPage /></RoleGuard>} />
             <Route path="/commercial/quotes/:id" element={<RoleGuard allowedRoles={['full', 'commercial']}><QuoteBuilderPage /></RoleGuard>} />

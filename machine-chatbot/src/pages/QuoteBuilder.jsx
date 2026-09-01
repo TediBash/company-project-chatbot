@@ -197,7 +197,7 @@ export const QuoteBuilderPage = () => {
       render: (_, row) => {
         if (!row.machineId) return <span className="text-gray-400 italic text-xs">General / No Machine</span>;
         const m = machines.find(mac => mac.id === row.machineId);
-        return <span className="text-xs font-medium text-gray-700">{m ? `${m.modelDescription} (SN: ${m.serialNumber})` : 'Unknown'}</span>;
+        return <span className="text-xs font-medium text-gray-700">{m ? `${m.modelCode} (SN: ${m.serialNumber})` : 'Unknown'}</span>;
       }
     },
     {
@@ -256,7 +256,7 @@ export const QuoteBuilderPage = () => {
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0 gap-8">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-4 lg:gap-8">
         
         {/* 2. LEFT SIDEBAR: REVISIONS LIST */}
         <div className="w-80 shrink-0 flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -305,37 +305,41 @@ export const QuoteBuilderPage = () => {
           ) : (
             <>
               {/* Revision Header */}
-              <div className="p-6 border-b border-gray-100 flex justify-between items-end bg-gray-50/50">
+              <div className="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 bg-gray-50/50">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">Revision {activeRevision.revisionNumber} Lines</h2>
                   <p className="text-sm text-gray-500 mt-1 max-w-2xl">{activeRevision.changeSummary}</p>
                 </div>
                 {isPlatformOwner && (
-                  <button onClick={() => openLineModal()} className="px-6 py-2 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase tracking-wider shadow-sm transition-opacity">
+                  <button onClick={() => openLineModal()} className="w-full sm:w-auto shrink-0 px-6 py-2 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase tracking-wider shadow-sm transition-opacity">
                     + Add Line Item
                   </button>
                 )}
               </div>
 
               {/* Lines Table */}
-              <div className="flex-1 overflow-auto">
+              <div className="flex-1 overflow-x-auto overflow-y-auto w-full">
                 <DynamicTable columns={lineColumns} data={activeRevision.lines || []} />
               </div>
 
               {/* Financial Summary Footer */}
-              <div className="shrink-0 bg-gray-900 text-white p-6 flex justify-end gap-12 rounded-b-xl">
-                <div className="text-right">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Subtotal</p>
-                  <p className="font-mono text-gray-300 mt-1">{currencySymbol} {subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <div className="shrink-0 bg-gray-900 text-white p-4 sm:p-6 flex flex-col sm:flex-row sm:justify-end items-stretch sm:items-center gap-3 sm:gap-8 lg:gap-12 rounded-b-xl">
+                
+                <div className="flex justify-between sm:block text-right">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold sm:mb-1">Subtotal</p>
+                  <p className="font-mono text-gray-300">{currencySymbol} {subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Discount ({(activeRevision.discountRate * 100).toFixed(0)}%)</p>
-                  <p className="font-mono text-red-400 mt-1">- {currencySymbol} {discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                
+                <div className="flex justify-between sm:block text-right">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold sm:mb-1">Discount ({(activeRevision.discountRate * 100).toFixed(0)}%)</p>
+                  <p className="font-mono text-red-400">- {currencySymbol} {discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
-                <div className="text-right pl-8 border-l border-gray-700">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Final Total</p>
-                  <p className="text-xl font-mono text-white mt-1">{currencySymbol} {finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                
+                <div className="flex justify-between sm:block text-right pt-3 sm:pt-0 sm:pl-8 border-t sm:border-t-0 sm:border-l border-gray-700">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold sm:mb-1 flex items-center">Final Total</p>
+                  <p className="text-lg sm:text-xl font-mono text-white">{currencySymbol} {finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
+                
               </div>
             </>
           )}
@@ -396,7 +400,7 @@ export const QuoteBuilderPage = () => {
                 <select value={lineForm.machineId} onChange={e => setLineForm({...lineForm, machineId: e.target.value})} className="w-full border-b border-gray-300 py-2 text-sm bg-white focus:outline-none focus:border-[var(--color-tenant-primary)]">
                   <option value="">-- General Supply / No Asset --</option>
                   {machines.map(m => (
-                    <option key={m.id} value={m.id}>{m.serialNumber} - {m.modelDescription}</option>
+                    <option key={m.id} value={m.id}>{m.serialNumber} - {m.modelCode}</option>
                   ))}
                 </select>
               </div>

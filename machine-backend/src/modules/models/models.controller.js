@@ -11,6 +11,8 @@ export const getModels = async (req, res) => {
         model_id AS "id",
         model_code AS "modelCode",
         description,
+        industry_segment AS "industrySegment",
+        notes,
         container_type AS "containerType",
         cap_type AS "capType",
         nominal_heads AS "nominalHeads",
@@ -24,7 +26,7 @@ export const getModels = async (req, res) => {
     let paramIndex = 1;
 
     if (search) {
-      sql += ` AND (model_code ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR container_type ILIKE $${paramIndex})`;
+      sql += ` AND (model_code ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR container_type ILIKE $${paramIndex} OR industry_segment ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
@@ -43,20 +45,22 @@ export const getModels = async (req, res) => {
 export const createModel = async (req, res) => {
   const { 
     modelCode, description, containerType, capType, 
-    nominalHeads, primitiveDiameter, manualUrl 
+    nominalHeads, primitiveDiameter, manualUrl,
+    industrySegment, notes
   } = req.body;
 
   try {
     const sql = `
       INSERT INTO app_tenant.machine_models 
-        (model_code, description, container_type, cap_type, nominal_heads, primitive_diameter, manual_url)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (model_code, description, container_type, cap_type, nominal_heads, primitive_diameter, manual_url, industry_segment, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING model_id;
     `;
     
     await query(sql, [
       modelCode, description, containerType, capType, 
-      nominalHeads || null, primitiveDiameter || null, manualUrl || null
+      nominalHeads || null, primitiveDiameter || null, manualUrl || null,
+      industrySegment || null, notes || null
     ]);
 
     res.status(201).json({ message: 'Machine model cataloged successfully.' });
@@ -74,20 +78,23 @@ export const updateModel = async (req, res) => {
   const { id } = req.params;
   const { 
     modelCode, description, containerType, capType, 
-    nominalHeads, primitiveDiameter, manualUrl 
+    nominalHeads, primitiveDiameter, manualUrl,
+    industrySegment, notes
   } = req.body;
 
   try {
     const sql = `
       UPDATE app_tenant.machine_models 
       SET model_code = $1, description = $2, container_type = $3, 
-          cap_type = $4, nominal_heads = $5, primitive_diameter = $6, manual_url = $7
-      WHERE model_id = $8
+          cap_type = $4, nominal_heads = $5, primitive_diameter = $6, manual_url = $7,
+          industry_segment = $8, notes = $9
+      WHERE model_id = $10
     `;
     
     await query(sql, [
       modelCode, description, containerType, capType, 
-      nominalHeads || null, primitiveDiameter || null, manualUrl || null, id
+      nominalHeads || null, primitiveDiameter || null, manualUrl || null,
+      industrySegment || null, notes || null, id
     ]);
 
     res.json({ message: 'Machine model updated successfully.' });

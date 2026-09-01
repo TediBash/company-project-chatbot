@@ -125,6 +125,7 @@ class CognitiveLoopExecutor:
             
             # Extract credentials and machine specifics
             active_machine_name = getattr(self, "active_machine_name", "Unknown Model")
+            active_machine_model = getattr(self, "active_machine_model", "Unknown Model")
             raw_serial = getattr(self, "active_serial_number", "")
             active_serial = raw_serial if raw_serial and raw_serial != getattr(self, "active_machine_id", "") else "Unknown SN"
             
@@ -140,7 +141,9 @@ class CognitiveLoopExecutor:
             # ---> MOVED: Machine Directive is now globally available to all agents <---
             machine_directive = (
                 f"\n### ACTIVE TARGET MACHINE\n"
-                f"You are currently supporting the {active_machine_name} (Serial Number: {active_serial}).\n"
+                f"You are currently supporting the {active_machine_name}.\n"
+                f"- Model Code: {active_machine_model}\n"
+                f"- Serial Number: {active_serial}\n"
                 f"### EXTENDED CONFIGURATION PROFILE\n"
                 f"The physical specifications and installed options for this specific machine are:\n"
                 f"{machine_config_data}\n\n"

@@ -350,12 +350,20 @@ export const QuotesPage = () => {
                   required disabled={!!selectedQuote} // Prevent changing company after creation
                   value={form.companyId} 
                   onChange={(e) => setForm({...form, companyId: e.target.value})} 
-                  className="w-full border-b border-gray-300 py-2 text-sm bg-white focus:outline-none focus:border-[var(--color-tenant-primary)] disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full border-b border-gray-300 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:border-[var(--color-tenant-primary)] disabled:bg-gray-50 disabled:text-gray-500"
                 >
                   <option value="">-- Select a Client --</option>
-                  {options.companies.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  {options.companies.map(c => {
+                    // Safely extract the ID and Name just like the filter does
+                    const val = c.id || c.company_id;
+                    const label = c.name || c.companyName || c.company_name || c.id || 'Unknown Company';
+                    
+                    return (
+                      <option key={val} value={val}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             )}

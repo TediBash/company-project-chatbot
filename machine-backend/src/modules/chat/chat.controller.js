@@ -152,7 +152,7 @@ export const streamMessage = async (req, res) => {
 
   console.log('[DEBUG] Raw React Payload (req.body):', JSON.stringify(req.body, null, 2));
 
-  const { content, machine_name, serial_number } = req.body;
+  const { content, machine_name, serial_number, machine_model } = req.body;
   
   // 1. Extract the strict security context from the Node.js auth middleware
   const companyId = req.tenant.companyId;
@@ -175,7 +175,8 @@ export const streamMessage = async (req, res) => {
       role: userRole,
       message: content,
       machine_name: machine_name || "Unknown Model",
-      serial_number: serial_number || ""
+      serial_number: serial_number || "",
+      machine_model: machine_model || "Unknown Model"
     };
 
     // 4. Open the connection to the Python AI Engine

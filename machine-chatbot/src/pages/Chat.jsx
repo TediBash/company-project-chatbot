@@ -10,6 +10,7 @@ export const ChatPage = () => {
   let isAdmin = false;
   let currentUserId = null;
   let currentCompanyId = 'arol_corp'; 
+  let userRole = null;
   const token = localStorage.getItem('arol_token');
   
   if (token) {
@@ -18,6 +19,7 @@ export const ChatPage = () => {
       isAdmin = decoded.user?.visibility === 'full';
       currentUserId = decoded.user?.id;
       currentCompanyId = decoded.user?.company_id || 'arol_corp';
+      userRole = decoded.user?.visibility;
     } catch (e) {}
   }
 
@@ -30,16 +32,18 @@ export const ChatPage = () => {
   const [messages, setMessages] = useState([]);
   const [roadmap, setRoadmap] = useState({ steps: [] });
   
-  // NEW: Machine Selection & Fixed Context State
+  // Machine Selection & Fixed Context State
   const [availableMachines, setAvailableMachines] = useState([]);
   const [selectedMachine, setSelectedMachine] = useState('');
   const [activeMachineContext, setActiveMachineContext] = useState(null);
 
   const [viewingManual, setViewingManual] = useState(null);
   
-  // 3. Admin Toggle & Search State
+  // 3. UI Toggle & Search State
   const [viewAll, setViewAll] = useState(false);
   const [search, setSearch] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // <-- NEW: Left Sidebar Toggle
+  const [isRoadmapOpen, setIsRoadmapOpen] = useState(true);
   
   // 4. Real-time Agent State
   const [input, setInput] = useState('');
@@ -52,17 +56,16 @@ export const ChatPage = () => {
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+  // Guard Ref to prevent React 18 Strict Mode double-firing
+  const qrProcessedRef = useRef(false);
+
   // 5. Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newChatTitle, setNewChatTitle] = useState('');
-  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editChatTitle, setEditChatTitle] = useState('');
-  
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState(null);
-
-  const [isRoadmapOpen, setIsRoadmapOpen] = useState(true);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -70,9 +73,26 @@ export const ChatPage = () => {
 
   useEffect(() => { if (agentStatus) scrollToBottom(); }, [agentStatus]);
 
+  // Fetch Session History Sidebar
+  const fetchSessions = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/chat/sessions', {
+        params: { search, viewAll: viewAll.toString() }
+      });
+      setSessions(response.data.data);
+    } catch (err) {
+      console.error('Failed to load sessions', err);
+    }
+  }, [search, viewAll]);
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => { fetchSessions(); }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [fetchSessions]);
+
   // Fetch Available Machines & Handle QR Code Deep Linking
   useEffect(() => {
-    const fetchMachines = async () => {
+    const initMachinesAndDeepLinks = async () => {
       try {
         const response = await apiClient.get('/machines');
         const formattedMachines = response.data.map(machine => ({
@@ -82,22 +102,67 @@ export const ChatPage = () => {
           modelCode: machine.modelCode
         }));
         setAvailableMachines(formattedMachines);
+
+        // QR CODE INTERCEPTION LOGIC (JOINT KEY)
+        const urlModelCode = searchParams.get('modelCode');
+        const urlSerialNumber = searchParams.get('serialNumber');
+        
+        if (urlModelCode && urlSerialNumber) {
+          
+          // STRICT MODE GUARD: If we already started processing this QR code, stop immediately.
+          if (qrProcessedRef.current) return;
+          qrProcessedRef.current = true;
+          
+          // 1. Find target machine by joint key
+          const target = formattedMachines.find(m => 
+            m.modelCode === urlModelCode && m.serialNumber === urlSerialNumber
+          );
+          
+          if (target) {
+            // 2. Generate Automatic Title: Machine Name + Timestamp
+            const timestamp = new Date().toLocaleString(undefined, { 
+              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+            });
+            const autoTitle = `${target.modelCode} - ${timestamp}`;
+            
+            // 3. Automatically Create the Session
+            setIsProcessing(true);
+            try {
+              const res = await apiClient.post('/chat/sessions', {
+                title: autoTitle,
+                machine_id: target.id, 
+                company_id: currentCompanyId
+              });
+              
+              // Load the newly created session instantly
+              setActiveSession(res.data);
+              setMessages([]);
+              setRoadmap({ steps: [] });
+              
+              // Refresh the sidebar to show the new chat
+              fetchSessions();
+            } catch (createErr) {
+              console.error("Auto-create session failed", createErr);
+              alert("Failed to automatically create chat session from QR code.");
+            } finally {
+              setIsProcessing(false);
+            }
+          } else {
+            alert(`Machine ${urlModelCode} (SN: ${urlSerialNumber}) not found in your active fleet.`);
+          }
+          
+          // 4. Strip the parameters from the URL so it doesn't trigger again on refresh
+          setSearchParams({});
+        }
       } catch (err) {
         console.error('Failed to load company machines', err);
       }
     };
     
-    fetchMachines();
+    initMachinesAndDeepLinks();
+  }, [searchParams, setSearchParams, currentCompanyId, fetchSessions]);
 
-    const urlMachineId = searchParams.get('machineId');
-    if (urlMachineId) {
-      setSelectedMachine(urlMachineId);
-      setIsCreateModalOpen(true);
-      setSearchParams({});
-    }
-  }, [searchParams, setSearchParams]);
-
-  // --- NEW: Lock Machine Context strictly upon session change ---
+  // Lock Machine Context strictly upon session change
   useEffect(() => {
     if (activeSession?.machine_id && availableMachines.length > 0) {
       const machine = availableMachines.find(m => m.id === activeSession.machine_id);
@@ -119,23 +184,6 @@ export const ChatPage = () => {
       setActiveMachineContext(null);
     }
   }, [activeSession, availableMachines]);
-
-  // Fetch Session History Sidebar
-  const fetchSessions = useCallback(async () => {
-    try {
-      const response = await apiClient.get('/chat/sessions', {
-        params: { search, viewAll: viewAll.toString() }
-      });
-      setSessions(response.data.data);
-    } catch (err) {
-      console.error('Failed to load sessions', err);
-    }
-  }, [search, viewAll]);
-
-  useEffect(() => {
-    const delayDebounce = setTimeout(() => { fetchSessions(); }, 300);
-    return () => clearTimeout(delayDebounce);
-  }, [fetchSessions]);
 
   const loadConversation = async (sessionId) => {
     try {
@@ -191,7 +239,7 @@ export const ChatPage = () => {
     
     try {
       const res = await apiClient.post('/chat/sessions', { 
-        title: newChatTitle || `Diagnostic Session: ${selectedMachine}`,
+        title: newChatTitle || `Diagnostic Session`,
         machine_id: selectedMachine,
         company_id: currentCompanyId
       });
@@ -253,9 +301,9 @@ export const ChatPage = () => {
     try {
       const streamUrl = apiClient.getUri({ url: `/chat/sessions/${sessionId}/stream` });
 
-      // --- FIX: Use strictly the locked context ---
       const activeMachineSN = activeMachineContext?.serialNumber || '';
       const activeMachineName = activeMachineContext?.name || 'Unknown Model';
+      const activeMachineModel = activeMachineContext?.modelCode || 'Unknown Model';
 
       const response = await fetch(streamUrl, {
         method: 'POST',
@@ -266,7 +314,8 @@ export const ChatPage = () => {
         body: JSON.stringify({ 
           content: messageContent,
           machine_name: activeMachineName,
-          serial_number: activeMachineSN
+          serial_number: activeMachineSN,
+          machine_model: activeMachineModel
         })
       });
 
@@ -361,7 +410,7 @@ export const ChatPage = () => {
     sendMessageStream(activeSession.session_id || activeSession.id, input);
   };
 
-const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
+  const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
     try {
       setAgentStatus(approved ? 'Executing action...' : 'Cancelling action...');
       setIsProcessing(true);
@@ -375,24 +424,19 @@ const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
       }
 
       const actionType = data?.action || data?.action_type || "create_commercial_request";
-      // Dynamically grab whatever payload the AI sent (details for tickets, data for quotes)
       const actionDetails = data?.details || data?.data || data?.payload || {}; 
       
       const requestBody = {
         action: actionType,
-        details: actionDetails, // Send the entire dynamic payload to Python
+        details: actionDetails,
         machine_id: activeMachineContext?.id || activeSession?.machine_id || '',
         company_id: activeSession?.company_id || '', 
         approved: approved,
-        
-        // Keep these top-level for backward compatibility with your existing Ticket system
         title: actionDetails.title || data?.title || `Request for ${activeMachineContext?.name || 'Machine'}`,
         type: actionDetails.type || data?.type || 'spare_parts',
         urgency: actionDetails.urgency || data?.urgency || 'medium',
         description: actionDetails.description || data?.description || 'Automated request via AI Assistant.'
       };
-
-      console.log("[DEBUG] Chat.jsx Sending to Node:", requestBody);
 
       const actionUrl = apiClient.getUri({ url: `/chat/sessions/${sessionId}/action` });
       
@@ -456,7 +500,6 @@ const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
               <p className="text-[10px] uppercase font-bold text-gray-500 mb-2 tracking-widest">Pending Action</p>
               <h4 className="font-semibold text-sm mb-1">{actionPayload.action ? actionPayload.action.replace(/_/g, ' ').toUpperCase() : 'ACTION REQUIRED'}</h4>
               <p className="text-xs text-gray-600 mb-4 font-mono bg-white p-2 border border-gray-100 rounded overflow-x-auto">
-                {/* Dynamically render details OR data depending on what the tool passed */}
                 {JSON.stringify(actionPayload.details || actionPayload.data || actionPayload.payload || {}, null, 2)}
               </p>
               
@@ -502,96 +545,129 @@ const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
   return (
     <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden animate-in fade-in duration-500">
       
-      {/* LEFT SIDEBAR */}
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col min-h-0">
-        <div className="p-4 border-b border-gray-100 shrink-0">
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="w-full py-2.5 mb-4 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase tracking-wider shadow-sm transition-opacity"
-          >
-            + New Chat
-          </button>
-          
-          {isAdmin && (
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
-              <span className="text-xs font-bold text-gray-600 uppercase tracking-widest">View Team Chats</span>
-              <button
-                onClick={() => setViewAll(!viewAll)}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${viewAll ? 'bg-[var(--color-tenant-primary)]' : 'bg-gray-300'}`}
-              >
-                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${viewAll ? 'translate-x-5' : 'translate-x-1'}`} />
-              </button>
-            </div>
-          )}
-
-          <input 
-            type="text" 
-            placeholder="Search history..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:border-[var(--color-tenant-primary)] transition-colors"
-          />
-        </div>
+      {/* LEFT SIDEBAR: Chat History (Collapsible) */}
+      <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 min-h-0 z-20 ${isSidebarOpen ? 'w-80' : 'w-14 items-center'}`}>
         
-        <div className="flex-1 overflow-y-auto min-h-0 p-2">
-          {sessions.map(session => (
-            <div 
-              key={session.id}
-              className={`group relative w-full flex items-center justify-between p-3 rounded-lg mb-1 transition-colors ${activeSession?.id === session.id || activeSession?.session_id === session.id ? 'bg-blue-50 border border-blue-100' : 'hover:bg-gray-50 border border-transparent cursor-pointer'}`}
-              onClick={() => loadConversation(session.id)}
-            >
-              <div className="flex-1 pr-6">
-                <h4 className="text-sm font-semibold text-gray-800 line-clamp-1 mb-1">{session.title}</h4>
-                <div className="flex justify-between items-center text-[10px] text-gray-400">
-                  <span>{new Date(session.updatedAt || Date.now()).toLocaleDateString()}</span>
-                  {viewAll && session.userId !== currentUserId && (
-                    <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-bold">{session.userName}</span>
-                  )}
-                </div>
-              </div>
-              
-              <button 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  setSessionToDelete(session); 
-                  setIsDeleteModalOpen(true); 
-                }}
-                className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all shadow-sm bg-white"
-                title="Delete Chat"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          ))}
+        {/* Toggle Header */}
+        <div className={`p-4 border-b border-gray-100 bg-gray-50/50 flex ${isSidebarOpen ? 'justify-between' : 'justify-center'} items-center shrink-0 w-full`}>
+          {isSidebarOpen && <h3 className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-500 truncate mr-2">Chat History</h3>}
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="text-gray-400 hover:text-[var(--color-tenant-primary)] transition-colors p-1 rounded hover:bg-gray-200"
+            title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+          >
+            <svg className={`w-5 h-5 transform transition-transform duration-300 ${isSidebarOpen ? 'rotate-0' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
         </div>
+
+        {isSidebarOpen ? (
+          <>
+            <div className="p-4 border-b border-gray-100 shrink-0 w-full">
+              <button 
+                onClick={() => setIsCreateModalOpen(true)}
+                className="w-full py-2.5 mb-4 text-xs font-bold text-white bg-[var(--color-tenant-primary)] hover:opacity-90 rounded-md uppercase tracking-wider shadow-sm transition-opacity"
+              >
+                + New Chat
+              </button>
+              
+              {isAdmin && (
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                  <span className="text-xs font-bold text-gray-600 uppercase tracking-widest">View Team Chats</span>
+                  <button
+                    onClick={() => setViewAll(!viewAll)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${viewAll ? 'bg-[var(--color-tenant-primary)]' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${viewAll ? 'translate-x-5' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              )}
+
+              <input 
+                type="text" 
+                placeholder="Search history..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:border-[var(--color-tenant-primary)] transition-colors"
+              />
+            </div>
+            
+            <div className="flex-1 overflow-y-auto min-h-0 p-2 w-full">
+              {sessions.map(session => (
+                <div 
+                  key={session.id}
+                  className={`group relative w-full flex items-center justify-between p-3 rounded-lg mb-1 transition-colors ${activeSession?.id === session.id || activeSession?.session_id === session.id ? 'bg-blue-50 border border-blue-100' : 'hover:bg-gray-50 border border-transparent cursor-pointer'}`}
+                  onClick={() => loadConversation(session.id)}
+                >
+                  <div className="flex-1 pr-6">
+                    <h4 className="text-sm font-semibold text-gray-800 line-clamp-1 mb-1">{session.title}</h4>
+                    <div className="flex justify-between items-center text-[10px] text-gray-400">
+                      <span>{new Date(session.updatedAt || Date.now()).toLocaleDateString()}</span>
+                      {viewAll && session.userId !== currentUserId && (
+                        <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-bold">{session.userName}</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <button 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setSessionToDelete(session); 
+                      setIsDeleteModalOpen(true); 
+                    }}
+                    className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all shadow-sm bg-white"
+                    title="Delete Chat"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col pt-4 items-center w-full">
+            <button 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="p-2 bg-[var(--color-tenant-primary)] text-white rounded-full hover:opacity-90 shadow-sm transition-opacity mb-4"
+              title="New Chat"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            <div className="w-6 border-b border-gray-200 mb-4"></div>
+            <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+          </div>
+        )}
       </div>
 
       {/* CENTER: Main Chat Interface */}
-      <div className="flex-1 flex flex-col relative">
+      <div className="flex-1 flex flex-col relative min-w-0">
         <div className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
-          <div className="flex flex-col justify-center">
-            <h2 className="text-lg font-light text-gray-900 leading-tight">
+          <div className="flex flex-col justify-center truncate mr-4">
+            <h2 className="text-lg font-light text-gray-900 leading-tight truncate">
               {activeSession ? activeSession.title : 'Select or create a chat to begin'}
             </h2>
             
-            {/* --- FIX: Use strictly the locked context --- */}
             {activeMachineContext && (
               <p className="text-[10px] font-bold text-[var(--color-tenant-primary)] uppercase tracking-widest mt-0.5 flex items-center gap-1">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                 </svg>
-                {activeMachineContext.name}
-                <span className="text-gray-400 font-medium ml-1">(SN: {activeMachineContext.serialNumber})</span>
+                <span className="truncate">{activeMachineContext.modelCode}</span>
+                <span className="text-gray-400 font-medium ml-1 shrink-0">(SN: {activeMachineContext.serialNumber})</span>
               </p>
             )}
           </div>
           
           {activeSession && (
-            <div className="flex gap-3">
-
-              {activeMachineContext?.modelCode && (
+            <div className="flex gap-3 shrink-0">
+              {activeMachineContext?.modelCode && userRole !== 'commercial' && (
                 <button
                   onClick={() => setViewingManual(activeMachineContext)}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--color-tenant-primary)] bg-blue-50 border border-blue-100 hover:bg-blue-100 hover:opacity-90 transition-all rounded-md shadow-sm mr-2"
@@ -602,7 +678,6 @@ const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
                   Open Manual
                 </button>
               )}
-
               <button 
                 onClick={() => { setEditChatTitle(activeSession.title); setIsEditModalOpen(true); }}
                 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-[var(--color-tenant-primary)] transition-colors"
@@ -680,13 +755,14 @@ const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
         </div>
       </div>
 
-      {/* RIGHT SIDEBAR: Roadmap */}
+      {/* RIGHT SIDEBAR: Roadmap (Collapsible) */}
       <div className={`bg-white border-l border-gray-200 hidden lg:flex flex-col shadow-[-4px_0_15px_-5px_rgba(0,0,0,0.05)] z-10 transition-all duration-300 ${isRoadmapOpen ? 'w-72' : 'w-14 items-center'}`}>
-        <div className={`p-4 border-b border-gray-100 bg-gray-50/50 flex ${isRoadmapOpen ? 'justify-between' : 'justify-center'} items-center shrink-0`}>
+        <div className={`p-4 border-b border-gray-100 bg-gray-50/50 flex ${isRoadmapOpen ? 'justify-between' : 'justify-center'} items-center shrink-0 w-full`}>
           {isRoadmapOpen && <h3 className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-500 truncate mr-2">Live Roadmap</h3>}
           <button 
             onClick={() => setIsRoadmapOpen(!isRoadmapOpen)}
             className="text-gray-400 hover:text-[var(--color-tenant-primary)] transition-colors p-1 rounded hover:bg-gray-200"
+            title={isRoadmapOpen ? "Collapse Roadmap" : "Expand Roadmap"}
           >
             <svg className={`w-5 h-5 transform transition-transform duration-300 ${isRoadmapOpen ? 'rotate-0' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
@@ -695,7 +771,7 @@ const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
         </div>
 
         {isRoadmapOpen ? (
-          <div className="flex-1 overflow-y-auto min-h-0 p-4">
+          <div className="flex-1 overflow-y-auto min-h-0 p-4 w-full">
             {!roadmap || !roadmap.steps || roadmap.steps.length === 0 ? (
               <p className="text-xs text-gray-400 text-center mt-10 italic">No active procedures mapped.</p>
             ) : (
@@ -731,7 +807,7 @@ const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
             )}
           </div>
         ) : (
-          <div className="flex-1 flex flex-col pt-6 items-center border-t border-gray-50">
+          <div className="flex-1 flex flex-col pt-6 items-center w-full">
             <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
@@ -753,7 +829,7 @@ const handleHumanInTheLoop = async (actionData, approved, messageIndex) => {
               <option value="" disabled>-- Select a Target Machine --</option>
               {availableMachines.map(m => (
                 <option key={m.id} value={m.id}>
-                  {m.name} (SN: {m.serialNumber || m.id})
+                  {m.modelCode} (SN: {m.serialNumber || m.id})
                 </option>
               ))}
             </select>

@@ -58,6 +58,7 @@ class ChatStreamRequest(BaseModel):
     machine_name: str = "Unknown Model"
     serial_number: str = ""
     auth_token: str = ""
+    machine_model: str = "Unknown Model"
 
 @router.post("/stream")
 async def chat_stream(req: ChatStreamRequest, request: Request):
@@ -97,6 +98,7 @@ async def chat_stream(req: ChatStreamRequest, request: Request):
         executor.active_machine_id = active_machine_id
         executor.active_machine_name = req.machine_name
         executor.active_serial_number = str(req.serial_number) if req.serial_number else "Unknown SN"
+        executor.active_machine_model = req.machine_model
         executor.auth_token = extracted_token
         
         final_response_buffer = ""
