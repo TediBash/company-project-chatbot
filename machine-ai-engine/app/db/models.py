@@ -16,7 +16,6 @@ class ChatSession(Base):
     
     # This locks the entire conversation to a specific machine
     machine_id = Column(String(100), nullable=False, index=True)
-    
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class AITelemetryTrace(Base):

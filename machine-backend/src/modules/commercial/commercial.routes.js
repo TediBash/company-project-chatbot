@@ -20,7 +20,7 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/', getRequests);
-router.get('/options', getCommercialOptions); // MUST be above /:id
+router.get('/options', getCommercialOptions);
 router.post('/', createRequest);
 router.put('/:id', updateRequest);
 router.delete('/:id', deleteRequest);
