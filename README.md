@@ -160,19 +160,37 @@ ollama pull llama3
 
 ### Phase 5: AI Engine Setup
 
-
-
 The AI multi-agent orchestrator requires a specific Python environment. Using Anaconda, execute the following commands to create the environment and install dependencies:
 
 ```bash
 cd machine-ai-engine
 conda create --name arol-ai python=3.11.9
 conda activate arol-ai
-pip install -r requirements.txt
+pip install -r requirements.txt --ignore-installed
+
 
 ```
 
----
+For security, execute this manual `pip install` list in case something from the `requirements.txt` installation was missed. New installations:
+
+```bash
+pip install asyncpg
+pip install uvicorn
+pip install fastapi
+pip install pydantic_settings
+pip install httpx
+pip install sse_starlette
+pip install sqlalchemy
+pip install pyyaml
+pip install pymupdf
+pip install langchain_text_splitters
+pip install chromadb
+pip install litellm
+pip install pandas
+pip install datasets --force-reinstall
+pip install sentence_transformers
+
+```
 
 ### Phase 6: PostgreSQL 18 & pgAdmin4 Installation Guide
 
