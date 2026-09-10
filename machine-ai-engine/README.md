@@ -65,3 +65,9 @@ Exposes the REST APIs used by the frontend.
 Implements the vector search logic against ChromaDB and manages optional reranking to improve the relevance of retrieved manual excerpts.
 * **`app/llm/factory.py` (LLM Registry):**
 Contains the `LLMRegistry` class, which loads the configuration from `pipeline_config.yaml`. This factory pattern allows the system to dynamically instantiate different LLM providers (Local Ollama, OpenAI API, Gemini API) on a per-agent basis, providing maximum flexibility for rapid experimentation and model evaluation.
+
+## Copyright and License
+
+Copyright (c) 2026 Tedi Bashuri. All rights reserved.
+
+This project is strictly for viewing purposes. It may not be copied, modified, or distributed without express written permission. See the [LICENSE](LICENSE) file for more details.

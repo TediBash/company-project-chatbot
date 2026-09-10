@@ -59,3 +59,9 @@ Inside the **`src/modules/`** directory, the application is divided into sub-fol
 
 * **`controller.js`:** Contains all the implemented business logic and functional operations for that specific entity.
 * **`routes.js`:** Defines the specific API endpoints for the entity, binds the required role-based permissions to each route, and maps the route to its corresponding controller function.
+
+## Copyright and License
+
+Copyright (c) 2026 Tedi Bashuri. All rights reserved.
+
+This project is strictly for viewing purposes. It may not be copied, modified, or distributed without express written permission. See the [LICENSE](LICENSE) file for more details.

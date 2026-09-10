@@ -31,3 +31,9 @@ This is the core entry point for application routing. It defines all system rout
 This folder contains globally shared UI components, including Modals, Filters, and Table objects. These components are designed to be reused across all pages to ensure a consistent design system and uniform data display throughout the platform.
 * **`src/pages/` (Page Implementations):**
 This directory contains the individual implementations for every page in the application. Each file represents a complete view (e.g., the Chat Interface, the Fleet Dashboard, or the Quotes Manager) that is imported and rendered by the router in `App.jsx`.
+
+## Copyright and License
+
+Copyright (c) 2026 Tedi Bashuri. All rights reserved.
+
+This project is strictly for viewing purposes. It may not be copied, modified, or distributed without express written permission. See the [LICENSE](LICENSE) file for more details.

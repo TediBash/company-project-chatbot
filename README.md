@@ -257,3 +257,9 @@ sudo apt install postgresql-18 pgadmin4
 sudo systemctl status postgresql
 
 ```
+
+## Copyright and License
+
+Copyright (c) 2026 Tedi Bashuri. All rights reserved.
+
+This project is strictly for viewing purposes. It may not be copied, modified, or distributed without express written permission. See the [LICENSE](LICENSE) file for more details.
